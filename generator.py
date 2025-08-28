@@ -182,7 +182,11 @@ def generate_scenario(scenario_details: dict, language: str = "English") -> str:
         You can reuse descriptive elements to enhance the scenes, but the main element here is to have all the necessary elements for the GM to be able to interpret the scene:
             - Objective of the scene
             - Obstacle(s) of the scene
-            - Scene progression if the PCs do not intervene
+            - Scene progression
+                - What will happen
+                - How the PNJs will react
+                - What are the choices for the players
+            - What are the possible outcome of the scene
             - The NPCs
               - Specific information about the NPCs in this scene: What they want and what they are willing to do
               - Dialogue lines if needed
