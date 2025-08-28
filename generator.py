@@ -293,6 +293,9 @@ def generate_scenario(scenario_details: dict, language: str = "English") -> str:
     final_scenario = f"""
 # {title}
 
+## Synopsis
+{synopsis}
+
 ## Game Master's Interaction Guide
 *Here is the sequence of situations the players will encounter and how the world might react to their actions. This version has been revised and corrected for consistency.*
 
