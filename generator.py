@@ -5,221 +5,227 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
-# --- 1. Configuration du Modèle de Langage (LLM) via l'API Google Gemini ---
+# --- 1. Language Model (LLM) Configuration via Google Gemini API ---
 load_dotenv()
 
 if "GOOGLE_API_KEY" not in os.environ:
-    raise ValueError("ERREUR : La variable d'environnement GOOGLE_API_KEY n'est pas définie.")
+    raise ValueError("ERROR: The GOOGLE_API_KEY environment variable is not set.")
 
 def clean_llm_output(text: str) -> str:
     """
-    Nettoie la sortie d'un LLM en supprimant les balises <think>...</think>
-    et les espaces superflus au début et à la fin.
+    Cleans the output of an LLM by removing <think>...</think> tags
+    and superfluous spaces at the beginning and end.
     """
     if not isinstance(text, str):
         return ""
     cleaned_text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
     return cleaned_text.strip()
 
-def generate_scenario(scenario_details: dict) -> str:
+def generate_scenario(scenario_details: dict, language: str = "English") -> str:
     """
-    Génère un scénario de JDR complet à partir des détails fournis.
+    Generates a complete RPG scenario from the provided details in the specified language.
     """
     llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.8, convert_system_message_to_human=True)
 
-    # --- 2. Définition des Prompts pour les Agents ---
+    # --- 2. Definition of Prompts for the Agents ---
 
     prompt_synopsis = ChatPromptTemplate.from_template(
         """
-        Tu es un scénariste et tu sais comment articuler une histoire à partir d'élements divers.
+        You are a scriptwriter and you know how to articulate a story from various elements.
 
-        En t'inspirant de ces éléments :
-        - **Système de jeu** : {game_system}
-        - **Nombre de joueurs** : {player_count}
-        - **Thème et ton** : {theme_tone}
-        - **Idée de départ** : {core_idea}
-        - **Contraintes** : {constraints}
-        - **Éléments importants** : {key_elements}
-        - **Éléments à éviter** : {elements_to_avoid}
+        Drawing inspiration from these elements:
+        - **Game System**: {game_system}
+        - **Number of players**: {player_count}
+        - **Theme and tone**: {theme_tone}
+        - **Starting idea**: {core_idea}
+        - **Constraints**: {constraints}
+        - **Important elements**: {key_elements}
+        - **Elements to avoid**: {elements_to_avoid}
 
-        Écris une ébauche de scénario de jeu de rôle pour un one-shot qui doit pouvoir se dérouler sur une session de 4h.
-      Il faut que le scénario reste simple mais qu'il sache se concentrer sur le thème principal de l'histoire.
-      L'ébauche doit contenir ces éléments:
-       - Le synopsis de l'histoire
-       - Les étapes grossières de l'aventure liées par des éléments narratifs
-         - Si le scénario est linéaire, il s'agira d'une succéssion d'étaoes
-         - S'il s'agit d'un scénario plus ouvert, certains pré-requis peuvent être obligatoire pour arriver à certains lieux
-       - Les premiers template de PNJ : Leur rôle, leurs connexions avec les PJ, leur but et secret
-       - Les premiers lieux importants : Nom et description sommaire
+        Write a draft RPG scenario for a one-shot that can be played in a 4-hour session.
+        The scenario should remain simple but focus on the main theme of the story.
+        The draft must contain these elements:
+         - The synopsis of the story
+         - The rough stages of the adventure linked by narrative elements
+           - If the scenario is linear, it will be a succession of stages
+           - If it is a more open scenario, certain prerequisites may be mandatory to reach certain places
+         - The first NPC templates: Their role, their connections with the PCs, their goal and secret
+         - The first important places: Name and summary description
 
-        Génère la sortie au format Markdown.
+        Generate the output in Markdown format.
+        The final output must be in {language}.
         """
     )
 
     prompt_scenario_designer = ChatPromptTemplate.from_template(
         """
-        **Rôle** :
-        Tu es un **Concepteur de Scénarios de JDR**, expert en adaptation de synopsis narratifs en **aventures interactives et équilibrées**.
-        Grâce aux éléments suivants:
-        - **Synopsis de l’histoire** : {synopsis}
-        - **Système de jeu** : {game_system}
-        - **Nombre de joueurs** : {player_count}
+        **Role**:
+        You are an **RPG Scenario Designer**, an expert in adapting narrative synopses into **interactive and balanced adventures**.
+        Using the following elements:
+        - **Story Synopsis**: {synopsis}
+        - **Game System**: {game_system}
+        - **Number of players**: {player_count}
 
-        Explore les différentes étapes de l'histoire et structure les en différentes "scène" pour les joueurs.
-        Un scénario de jeu de rôle est une succession de scène qui seront joués par les joueurs et le MJ.
-        Les scène sont là où le MJ va interpréter des PNJs "contre" lesquels les joueurs vont agir
-              - Une négociation, un combat, une intrusion discrète, un rendez-vous d'affaire...
-        Il y a ensuite des obstacle, où seuls les PJ interragissent et jouent contre leurs "compétences"
-              - Une recherche d'information via leur contacts : Utilisation de leur compétence "Connaissance de la rue"
-              - Une tentative pour réparer un équipements ("Réparation")
-              - Une tentative pour ouvrir une porte fermée ("Crochetage")
-        Certaines scènes peuvent mixer des interaction personnelles et avec les PNJs
-        On peut dire que tout action est un obstacle.
+        Explore the different stages of the story and structure them into different "scenes" for the players.
+        An RPG scenario is a succession of scenes that will be played by the players and the GM.
+        Scenes are where the GM will interpret NPCs against whom the players will act
+              - A negotiation, a fight, a discreet intrusion, a business meeting...
+        Then there are obstacles, where only the PCs interact and play against their "skills"
+              - A search for information via their contacts: Use of their "Streetwise" skill
+              - An attempt to repair equipment ("Repair")
+              - An attempt to open a locked door ("Lockpicking")
+        Some scenes can mix personal interactions and interactions with NPCs.
+        We can say that every action is an obstacle.
 
-        Enfin un élément secondaire d'un scénario est l'opportunité.
-        Cela correspond aux possibilités qui peuvent s'offrirent aux joueurs selon leurs interractions avec certains PNJs ou par leur passage dans certains lieux mais qui peuvent aussi leur rester inconnus.
-        Il y a de bonnes et mauvaises opportunités leur permettant soit de gagner du temps, des informations, des outils supplémentaires (elles doivent rester optionnelles). Elles peuvent aussi les amener dans une embuscade ou de fausses informations.
+        Finally, a secondary element of a scenario is the opportunity.
+        This corresponds to the possibilities that may be available to the players depending on their interactions with certain NPCs or their passage through certain places, but which may also remain unknown to them.
+        There are good and bad opportunities allowing them to either save time, information, additional tools (they must remain optional). They can also lead them into an ambush or false information.
 
-        L'idée d'une scène est qu'elle doit contenir:
-          - Un lieu
-          - Des PNJ
-          - Un ou des obstacles
-          - Un début et une fin : Définir ce qui déclenche la scène et ce qui la termine
-            - Il peut y avoir plusieurs fins possibles
+        The idea of a scene is that it must contain:
+          - A location
+          - NPCs
+          - One or more obstacles
+          - A beginning and an end: Define what triggers the scene and what ends it
+            - There can be several possible endings
 
-        Il faut que tu structure le scénario autours des ces élements: Scènes, Obstacles, Opportunités
-        Reste dans une structure globale sans rentrer dans trop de détails sur les PNJ, les lieux.
+        You must structure the scenario around these elements: Scenes, Obstacles, Opportunities.
+        Stay in a global structure without going into too much detail about the NPCs, the places.
+        The final output must be in {language}.
        """
     )
 
     prompt_npc_creator = ChatPromptTemplate.from_template(
         """
-        **Rôle** :
-        Tu es un **Créateur de Personnages Non-Joueurs (PNJ)**, expert en conception de personnages mémorables, vivants et adaptés aux scénarios de JDR.
+        **Role**:
+        You are a **Non-Player Character (NPC) Creator**, an expert in designing memorable, living characters adapted to RPG scenarios.
 
-        **Inputs** :
-        - **Scénario** : {scenario}
-        - **Système de jeu** : {game_system}
-        - **Contraintes initiales** : {constraints}
+        **Inputs**:
+        - **Scenario**: {scenario}
+        - **Game System**: {game_system}
+        - **Initial Constraints**: {constraints}
 
-        Avec les éléments précédents, crée les fiches des PNJs du scénario.
+        With the preceding elements, create the sheets for the scenario's NPCs.
 
-        2. **Structure de la fiche PNJ** :
+        2. **NPC Sheet Structure**:
            ```markdown
-           ### [Nom du PNJ]
-           **Rôle** : [Allié/Antagoniste/Neutre/Donneur de quête/Autre ?].
-           **Apparence** : 3 détails physiques marquants
-           **Personnalité** :
-              - **Traits dominants** : [2-3 adjectifs]
-              - **Son but** - Uniquement pour les PNJs principaux
-              - **Comment veut-il y parvenir** - Uniquement pour les PNJs principaux
-              - **Un secret** - Uniquement pour les PNJs principaux
-           **Liens avec l’histoire** :
-              - [Son rôle dans l’intrigue].
-              - **Lien avec les PJ** - Uniquement pour les PNJs principaux
-           **Dialogues clés** :
-              - [3 répliques typiques] - Uniquement pour les PNJs principaux
-           **Comportement en jeu** :
-              - [Comment il réagit aux actions des PJ] - Uniquement pour les PNJs principaux
-              - [Une quête/demande qu'il pourrait faire aux PNJ] - Uniquement pour les PNJs secondaire
+           ### [NPC Name]
+           **Role**: [Ally/Antagonist/Neutral/Quest Giver/Other?].
+           **Appearance**: 3 striking physical details.
+           **Personality**:
+              - **Dominant traits**: [2-3 adjectives]
+              - **Their goal** - Only for main NPCs
+              - **How they want to achieve it** - Only for main NPCs
+              - **A secret** - Only for main NPCs
+           **Links to the story**:
+              - [Their role in the plot].
+              - **Link with the PCs** - Only for main NPCs
+           **Key dialogues**:
+              - [3 typical lines] - Only for main NPCs
+           **Behavior in game**:
+              - [How they react to PCs' actions] - Only for main NPCs
+              - [A quest/request they could make to the NPCs] - Only for secondary NPCs
            ```
 
-        3. **Règles strictes** :
-           - **Ne pas inventer de nouveaux PNJ** : Se limiter à ceux du scénario.
-           - **Respecter les contraintes** : Ex : si un PJ a un lien avec Aldric, **le mettre en avant**.
-           - **Équilibrer les rôles** : Chaque PNJ doit avoir un **impact clair** sur l’histoire.
-           - **Détails sensoriels** : Toujours inclure **au moins 1 détail visuel, 1 sonore et 1 olfactif**.
+        3. **Strict rules**:
+           - **Do not invent new NPCs**: Limit yourself to those in the scenario.
+           - **Respect constraints**: Ex: if a PC has a link with Aldric, **highlight it**.
+           - **Balance the roles**: Each NPC must have a **clear impact** on the story.
+           - **Sensory details**: Always include **at least 1 visual, 1 sound, and 1 olfactory detail**.
 
-        4. **Sortie attendue** :
-           - Un **document Markdown** avec **toutes les fiches PNJ**, classées par ordre d’apparition dans le scénario.
-           - **Pas de commentaires**, seulement les fiches brutes.
-           - **Format strict** : Respecter le template ci-dessus pour chaque PNJ.
+        4. **Expected output**:
+           - A **Markdown document** with **all NPC sheets**, classified in order of appearance in the scenario.
+           - **No comments**, only the raw sheets.
+           - **Strict format**: Respect the template above for each NPC.
+        The final output must be in {language}.
         """
     )
 
     prompt_location_creator = ChatPromptTemplate.from_template(
         """
-        **Rôle** :
-        Tu es un **Architecte d'Environnements Narratifs**, spécialisé dans la création de **lieux immersifs, cohérents et interactifs** pour des scénarios de JDR.
+        **Role**:
+        You are a **Narrative Environment Architect**, specializing in the creation of **immersive, coherent, and interactive places** for RPG scenarios.
 
-        En te basant sur les éléments suivants:
-          - **Scénario corrigé** : {scenario}
-          - **Fiches PNJ** : {npc_sheets}
-          - **Thème et ton** : {theme_tone}
-          - **Contraintes initiales** : {constraints}
+        Based on the following elements:
+          - **Corrected Scenario**: {scenario}
+          - **NPC Sheets**: {npc_sheets}
+          - **Theme and tone**: {theme_tone}
+          - **Initial Constraints**: {constraints}
 
-        créé la fiche de TOUS les lieux du scénario en leur donnant vie pour que les PJ puisse au mieux les décrire aux joueurs.
+        Create the sheet for ALL the places in the scenario, bringing them to life so that the GM can best describe them to the players.
 
-        Il faut que tu apporte une première description narrative puis une "short list" descriptive en forme de liste en décrivant:
-          - L'atmosphère (ambiance, détails sensoriels)
-          - Les opportunités d'interaction (objets, pièges, indices)
-          - Les liens avec l'histoire et les PNJ
-          - Les dangers/opportunités (zones sûres, zones à risque, secrets cachés)
+        You must provide a first narrative description then a descriptive "short list" in list form describing:
+          - The atmosphere (ambiance, sensory details)
+          - Interaction opportunities (objects, traps, clues)
+          - Links with the story and NPCs
+          - Dangers/opportunities (safe areas, risk areas, hidden secrets)
 
-        **À exclure** :
-        - Toute référence à des mécaniques de jeu (jets de dés, stats)
-        - Les jugements esthétiques ("beau", "laid") - seulement des détails concrets
+        **To exclude**:
+        - Any reference to game mechanics (dice rolls, stats)
+        - Aesthetic judgments ("beautiful", "ugly") - only concrete details.
+        The final output must be in {language}.
         """
     )
 
     prompt_scene_developer = ChatPromptTemplate.from_template(
         """
-        **Rôle** :
-        Tu es un **Développeur de Scènes**, spécialisé dans l’enrichissement des squelettes narratifs avec des **détails immersifs, des dialogues et des interactions concrètes**.
+        **Role**:
+        You are a **Scene Developer**, specializing in enriching narrative skeletons with **immersive details, dialogues, and concrete interactions**.
 
-        **Inputs** :
-          - **Scénario** : {scenario}
-          - **Fiches PNJ** : {npc}
-          - **Fiches Lieux** : {locations}
-          - **Thème et ton** : {theme_tone}
-          - **Contraintes narratives** : {constraints}
+        **Inputs**:
+          - **Scenario**: {scenario}
+          - **NPC Sheets**: {npc}
+          - **Location Sheets**: {locations}
+          - **Theme and tone**: {theme_tone}
+          - **Narrative constraints**: {constraints}
 
-        Reprend les éléments précédents pour enrichir le découpage des scènes et obstacles avec les PNJ et les lieux.
-        Tu peux reprendre les éléments de descriptions pour agrémenter les scènes, mais l'éléments principal ici est d'avoir tous les éléments nécessaire au MJ pour qu'il puisse interpréter la scène:
-            - Objectif de la scène
-            - Obstacle(s) de la scène
-            - Déroulement de la scène siles PJ n'interviennent pas
-            - Les PNJs
-              - Les informations spécifiques des PNJs dans cette scène : Ce qu'ils veulent et ce qu'ils sont prêt à faire
-              - Des lignes de dialogues si besoin
-            - Résolutions possibles
-            - Transition : [Lien vers la prochaine scène ou condition de clôture de la scène].
+        Use the preceding elements to enrich the breakdown of scenes and obstacles with the NPCs and locations.
+        You can reuse descriptive elements to enhance the scenes, but the main element here is to have all the necessary elements for the GM to be able to interpret the scene:
+            - Objective of the scene
+            - Obstacle(s) of the scene
+            - Scene progression if the PCs do not intervene
+            - The NPCs
+              - Specific information about the NPCs in this scene: What they want and what they are willing to do
+              - Dialogue lines if needed
+            - Possible resolutions
+            - Transition: [Link to the next scene or scene closing condition].
+        The final output must be in {language}.
         """
     )
 
     prompt_title_generator = ChatPromptTemplate.from_template(
         """
-        **Rôle** :
-        Tu es un **Maître des Titres pour Scénarios de JDR**, expert dans la création de **noms percutants et mémorables** qui captent l'essence d'une aventure en une seule phrase.
-        Ta mission : **Générer UN SEUL titre** pour le scénario final ci-dessous, en respectant ces règles :
+        **Role**:
+        You are a **Master of Titles for RPG Scenarios**, an expert in creating **punchy and memorable names** that capture the essence of an adventure in a single sentence.
+        Your mission: **Generate ONE SINGLE title** for the final scenario below, respecting these rules:
 
-        **Inputs** :
-          - **Scénario** : {scenario}
-          - **Découpage des scènes** : {scenes}
-          - **Thème et ton** : {theme_tone}
+        **Inputs**:
+          - **Scenario**: {scenario}
+          - **Scene breakdown**: {scenes}
+          - **Theme and tone**: {theme_tone}
 
-        1. **Synthétiser l'essence** :
-           - Le titre doit refléter le **thème**, le **ton**, et les **enjeux principaux** du scénario.
-           - Il doit évoquer les **éléments clés** (PNJ, lieux, objets symboliques) de manière **subtile ou directe**.
+        1. **Synthesize the essence**:
+           - The title must reflect the **theme**, the **tone**, and the **main stakes** of the scenario.
+           - It must evoke the **key elements** (NPCs, places, symbolic objects) in a **subtle or direct** way.
 
-        2. **Respecter les contraintes** :
-           - Inclure une référence aux **contraintes narratives**
-           - Éviter les éléments interdits (ex : gangs extérieurs).
-           - Capturer l'**ambiance**
+        2. **Respect the constraints**:
+           - Include a reference to the **narrative constraints**
+           - Avoid forbidden elements (e.g., external gangs).
+           - Capture the **atmosphere**
 
-        3. **Équilibre parfait** :
-           - Assez **intrigant** pour attirer les joueurs.
-           - Assez **clair** pour que le MJ comprenne immédiatement le cœur du scénario.
-           - **Mémorable** : Court, percutant, avec un jeu de mots ou une métaphore forte si possible.
+        3. **Perfect balance**:
+           - **Intriguing** enough to attract players.
+           - **Clear** enough for the GM to immediately understand the heart of the scenario.
+           - **Memorable**: Short, punchy, with a pun or a strong metaphor if possible.
 
-        4. **Format de sortie** :
+        4. **Output format**:
         ```markdown
-        # Titre Final : **[Titre Unique]**
+        # Final Title: **[Unique Title]**
         ```
+        The final output must be in {language}.
         """
     )
 
-    # --- Orchestration des Agents ---
+    # --- Agent Orchestration ---
     chain_synopsis = prompt_synopsis | llm | StrOutputParser()
     chain_scenario_designer = prompt_scenario_designer | llm | StrOutputParser()
     chain_npc_creator = prompt_npc_creator | llm | StrOutputParser()
@@ -227,70 +233,75 @@ def generate_scenario(scenario_details: dict) -> str:
     chain_scene_developer = prompt_scene_developer | llm | StrOutputParser()
     chain_title_generator = prompt_title_generator | llm | StrOutputParser()
 
-    # Étape 0: Création du synopsis
-    synopsis = chain_synopsis.invoke(scenario_details)
+    # Step 0: Create the synopsis
+    synopsis = chain_synopsis.invoke({**scenario_details, "language": language})
     synopsis = clean_llm_output(synopsis)
 
-    # Étape 1: Structure du scénario
+    # Step 1: Structure the scenario
     scenario = chain_scenario_designer.invoke({
         "synopsis": synopsis,
         "game_system": scenario_details["game_system"],
-        "player_count": scenario_details["player_count"]
+        "player_count": scenario_details["player_count"],
+        "language": language
     })
     scenario = clean_llm_output(scenario)
 
-    # Étape 2: Création des PNJ
+    # Step 2: Create the NPCs
     npcs = chain_npc_creator.invoke({
         "scenario": scenario,
         "game_system": scenario_details["game_system"],
-        "constraints": scenario_details["constraints"]
+        "constraints": scenario_details["constraints"],
+        "language": language
     })
     npcs = clean_llm_output(npcs)
 
-    # Étape 3: Création des Lieux
+    # Step 3: Create the Locations
     locations = chain_location_creator.invoke({
         "scenario": scenario,
         "npc_sheets": npcs,
         "theme_tone": scenario_details["theme_tone"],
-        "constraints": scenario_details["constraints"]
+        "constraints": scenario_details["constraints"],
+        "language": language
     })
     locations = clean_llm_output(locations)
 
-    # Étape 4: Remplissage des scènes
+    # Step 4: Flesh out the scenes
     scenes = chain_scene_developer.invoke({
         "scenario": scenario,
         "npc": npcs,
         "locations": locations,
         "theme_tone": scenario_details["theme_tone"],
-        "constraints": scenario_details["constraints"]
+        "constraints": scenario_details["constraints"],
+        "language": language
     })
     scenes = clean_llm_output(scenes)
 
-    # Étape 5: Création du titre
+    # Step 5: Create the title
     title = chain_title_generator.invoke({
         "scenario": scenario,
         "scenes": scenes,
-        "theme_tone": scenario_details["theme_tone"]
+        "theme_tone": scenario_details["theme_tone"],
+        "language": language
     })
     title = clean_llm_output(title)
 
-    # --- Assemblage final ---
+    # --- Final Assembly ---
     final_scenario = f"""
 # {title}
 
-## Guide d'Interaction pour le Maître du Jeu
-*Voici le déroulé des situations que les joueurs rencontreront et comment le monde peut réagir à leurs actions. Cette version a été revue et corrigée pour plus de cohérence.*
+## Game Master's Interaction Guide
+*Here is the sequence of situations the players will encounter and how the world might react to their actions. This version has been revised and corrected for consistency.*
 
 {scenes}
 
-## Personnages Clés
-### PNJ Principaux
-*Les acteurs majeurs de cette histoire.*
+## Key Characters
+### Main NPCs
+*The major players in this story.*
 
 {npcs}
 
-## Lieux Importants
-*Les décors principaux où se déroulera l'action.*
+## Important Locations
+*The main settings where the action will take place.*
 
 {locations}
 """
