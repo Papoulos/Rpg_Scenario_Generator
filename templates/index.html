@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur de Scénario JDR</title>
+    <style>
+        body { font-family: sans-serif; margin: 2em; background-color: #f4f4f4; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 2em; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #333; }
+        label { display: block; margin-top: 1em; font-weight: bold; color: #555; }
+        input, textarea { width: 100%; padding: 0.5em; margin-top: 0.5em; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        textarea { height: 100px; }
+        button { display: block; width: 100%; padding: 1em; margin-top: 2em; background-color: #007BFF; color: white; border: none; border-radius: 4px; font-size: 1.2em; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Générateur de Scénario de Jeu de Rôle</h1>
+        <form action="/generate" method="post">
+            <label for="game_system">Système de jeu</label>
+            <input type="text" id="game_system" name="game_system" value="Cyberpunk avec le système de jeu Cypher System" required>
+
+            <label for="player_count">Nombre de joueurs</label>
+            <input type="text" id="player_count" name="player_count" value="4 joueurs" required>
+
+            <label for="theme_tone">Thème et ton</label>
+            <input type="text" id="theme_tone" name="theme_tone" value="Action, horreur" required>
+
+            <label for="core_idea">Idée de départ</label>
+            <textarea id="core_idea" name="core_idea" required>Un de leur proche est malade à cause d'une nouvelle drogue mise sur le marché, ils vont enquêter.</textarea>
+
+            <label for="constraints">Contraintes</label>
+            <textarea id="constraints" name="constraints">L'un de leur nouveaux alliés sera le véritable méchant</textarea>
+
+            <label for="key_elements">Éléments importants</label>
+            <textarea id="key_elements" name="key_elements">trahison et manipulation</textarea>
+
+            <label for="elements_to_avoid">Éléments à éviter</slabel>
+            <textarea id="elements_to_avoid" name="elements_to_avoid"></textarea>
+
+            <button type="submit">Générer le scénario</button>
+        </form>
+    </div>
+</body>
+</html>
