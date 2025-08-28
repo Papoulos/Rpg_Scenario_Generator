@@ -6,3 +6,4 @@ langchain_community
 Flask
 WeasyPrint
 Markdown2
+beautifulsoup4
