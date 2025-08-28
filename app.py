@@ -20,9 +20,10 @@ def generate():
         "elements_to_avoid": request.form.get('elements_to_avoid'),
         "core_idea": request.form.get('core_idea')
     }
+    language = request.form.get('language')
 
     # Generate the scenario
-    markdown_output = generate_scenario(scenario_details)
+    markdown_output = generate_scenario(scenario_details, language=language)
 
     # Convert markdown to HTML for display
     html_output = markdown2.markdown(markdown_output, extras=["fenced-code-blocks", "tables"])
@@ -33,12 +34,12 @@ def generate():
 def download_pdf():
     markdown_content = request.form.get('markdown_content')
     if not markdown_content:
-        return "Erreur: Contenu non trouvé.", 400
+        return "Error: Content not found.", 400
 
-    # Convertir Markdown en HTML
+    # Convert Markdown to HTML
     html_content = markdown2.markdown(markdown_content, extras=["fenced-code-blocks", "tables"])
 
-    # Ajouter un style simple pour le PDF
+    # Add simple styling for the PDF
     html_for_pdf = f"""
     <html>
         <head>
@@ -58,7 +59,7 @@ def download_pdf():
     </html>
     """
 
-    # Générer le PDF
+    # Generate the PDF
     pdf = HTML(string=html_for_pdf).write_pdf()
 
     return Response(
