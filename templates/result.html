@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Votre Scénario Généré</title>
+    <style>
+        body { font-family: sans-serif; margin: 2em; background-color: #f4f4f4; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 2em; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1, h2, h3 { color: #333; }
+        .scenario-content { margin-top: 2em; border-top: 1px solid #ddd; padding-top: 1em; }
+        .toolbar { text-align: right; margin-bottom: 1em; }
+        button { padding: 0.8em 1.2em; background-color: #28a745; color: white; border: none; border-radius: 4px; font-size: 1em; cursor: pointer; }
+        button:hover { background-color: #218838; }
+        pre { background-color: #eee; padding: 1em; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; }
+        code { font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Votre Scénario a été Généré !</h1>
+
+        <div class="toolbar">
+            <form action="/download_pdf" method="post" style="display: inline;">
+                <input type="hidden" name="markdown_content" value="{{ scenario_markdown }}">
+                <button type="submit">Télécharger en PDF</button>
+            </form>
+        </div>
+
+        <div class="scenario-content">
+            {{ scenario_html|safe }}
+        </div>
+    </div>
+</body>
+</html>
