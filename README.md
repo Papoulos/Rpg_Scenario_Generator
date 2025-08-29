@@ -151,3 +151,18 @@ Pour une flexibilité maximale, notamment dans des environnements conteneurisés
     # CUSTOM_LLM_CONFIG_PATH="custom_llm.json"
     ```
 L'application chargera automatiquement les modèles de ce fichier au démarrage. Vous pourrez alors les appeler via l'API en utilisant leur nom (ex: `"model": "mon-llm-local"`).
+
+---
+
+## Dépannage
+
+### Problèmes de Connexion avec un LLM Personnalisé
+
+Si vous rencontrez une `APIConnectionError` ou si vos appels vers un LLM personnalisé ne semblent pas fonctionner, utilisez le point de terminaison de test pour diagnostiquer le problème.
+
+Accédez à l'URL suivante dans votre navigateur :
+`http://localhost:8000/test-connection/VOTRE_NOM_DE_MODELE`
+
+Remplacez `VOTRE_NOM_DE_MODELE` par le nom de votre modèle personnalisé (ex: `mon-llm-local`).
+
+La réponse JSON vous indiquera si la connexion a réussi ou échoué, et vous donnera des détails sur l'erreur (par exemple, "Connection timed out" ou "Failed to establish a connection"). Cela vous aidera à déterminer s'il s'agit d'un problème de pare-feu, de DNS ou d'accessibilité de votre API.

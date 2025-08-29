@@ -4,6 +4,7 @@ import time
 import uuid
 from bs4 import BeautifulSoup
 from flask import Flask, render_template, request, Response, jsonify
+import requests
 from weasyprint import HTML
 from generator import generate_scenario
 from chat import run_chat_completion
@@ -253,6 +254,62 @@ def chat_completions():
         # Catch-all for other unexpected errors
         app.logger.error(f"An unexpected error occurred: {e}")
         return jsonify({"error": "An internal server error occurred."}), 500
+
+
+@app.route('/test-connection/<model_name>')
+def test_connection(model_name):
+    """
+    A debugging endpoint to test network connectivity to a model's endpoint.
+    """
+    provider_config = get_provider_config(model_name)
+    if not provider_config:
+        return jsonify({
+            "status": "failure",
+            "message": f"Model '{model_name}' not found in configuration."
+        }), 404
+
+    endpoint = provider_config.get("endpoint")
+    if not endpoint:
+        return jsonify({
+            "status": "failure",
+            "message": f"Model '{model_name}' does not have an endpoint configured."
+        }), 400
+
+    try:
+        # We use a HEAD request with a timeout to be efficient.
+        response = requests.head(endpoint, timeout=5)
+        # Check if the status code is something other than a server error (5xx)
+        if response.status_code < 500:
+            return jsonify({
+                "status": "success",
+                "message": f"Successfully connected to endpoint '{endpoint}'.",
+                "status_code": response.status_code,
+                "headers": dict(response.headers),
+            })
+        else:
+             return jsonify({
+                "status": "failure",
+                "message": f"Connected to endpoint, but received a server error.",
+                "status_code": response.status_code,
+            })
+
+    except requests.exceptions.Timeout:
+        return jsonify({
+            "status": "failure",
+            "message": f"Connection to '{endpoint}' timed out after 5 seconds."
+        }), 504
+    except requests.exceptions.ConnectionError as e:
+        return jsonify({
+            "status": "failure",
+            "message": f"Failed to establish a connection to '{endpoint}'. Please check if the server is running and accessible from the application's network.",
+            "error_details": str(e),
+        }), 503
+    except requests.exceptions.RequestException as e:
+        return jsonify({
+            "status": "failure",
+            "message": f"An unexpected request error occurred.",
+            "error_details": str(e),
+        }), 500
 
 
 if __name__ == '__main__':

@@ -9,3 +9,4 @@ Markdown2
 beautifulsoup4
 langchain-openai
 langchain-mistralai
+requests
