@@ -1,3 +1,4 @@
+import os
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 from langchain_mistralai import ChatMistralAI
@@ -12,7 +13,10 @@ def get_llm_instance(model_name: str):
         model_name (str): The name of the model to initialize.
 
     Returns:
-        An instance of a LangChain chat model, or None if the provider is not found.
+        An instance of a LangChain chat model.
+
+    Raises:
+        ValueError: If the model is not configured or if the required API key is not set.
     """
     provider_config = get_provider_config(model_name)
     if not provider_config:
@@ -21,10 +25,15 @@ def get_llm_instance(model_name: str):
     service = provider_config["service"]
     config_model_name = provider_config["model_name"]
     api_key_name = provider_config.get("api_key_name")
-    api_key = api_keys.get(api_key_name)
 
-    if not api_key:
-        raise ValueError(f"API key '{api_key_name}' not found in environment variables.")
+    # Try to get the API key from the pre-defined dictionary,
+    # otherwise, get it directly from the environment variables.
+    api_key = api_keys.get(api_key_name)
+    if not api_key and api_key_name:
+        api_key = os.getenv(api_key_name)
+
+    if not api_key and api_key_name:
+        raise ValueError(f"API key for '{api_key_name}' not found. Please ensure the environment variable '{api_key_name}' is set in your .env file.")
 
     if service == "google":
         return ChatGoogleGenerativeAI(model=config_model_name, google_api_key=api_key)
