@@ -1,4 +1,5 @@
 import os
+import re
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 from langchain_mistralai import ChatMistralAI
@@ -37,21 +38,25 @@ def get_llm_instance(model_name: str):
 
     # --- Header Configuration ---
     # By default, langchain-openai uses the "Authorization: Bearer <api_key>" header.
-    # If a custom `headers` dict is provided in the config, we use that instead.
+    # If a custom `headers` dict is provided in the config, we process it.
     extra_headers = None
     custom_headers_config = provider_config.get("headers")
     if custom_headers_config:
         extra_headers = {}
         for key, value in custom_headers_config.items():
-            # Replace placeholder with the actual API key
-            if isinstance(value, str) and value == "{api_key}":
-                extra_headers[key] = api_key
-            else:
-                extra_headers[key] = value
+            # Find all placeholders like {VAR_NAME} in the header value
+            placeholders = re.findall(r"\{(.+?)\}", str(value))
+            processed_value = str(value)
+            for placeholder in placeholders:
+                # Get the value from environment and replace the placeholder
+                env_value = os.getenv(placeholder, "") # Default to empty string if not found
+                processed_value = processed_value.replace(f"{{{placeholder}}}", env_value)
+            extra_headers[key] = processed_value
 
     # For services that use custom headers, we pass the api_key as None to prevent
-    # the default "Authorization" header from being added if it's not needed.
-    final_api_key = None if extra_headers else api_key
+    # the default "Authorization" header from being added automatically by the client.
+    # The user is expected to handle the full auth in the custom `headers` field.
+    final_api_key = None if custom_headers_config else api_key
 
 
     if service == "google":

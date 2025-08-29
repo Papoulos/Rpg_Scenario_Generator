@@ -118,6 +118,51 @@ Chaque fournisseur est un dictionnaire dans `llm_providers`. Voici les clés pri
 
 ### Ajouter des LLMs personnalisés (Méthode avancée)
 
+
+Pour une flexibilité maximale, vous pouvez définir vos propres fournisseurs LLM dans un fichier JSON externe. C'est idéal pour les modèles auto-hébergés ou les services qui ne sont pas pré-configurés.
+
+**Exemple complet :**
+
+Supposons que vous ayez une API personnalisée qui nécessite un en-tête `x-api-key`.
+
+**1. Configurez votre clé API dans `.env`**
+```env
+# Ma clé API secrète pour mon service personnalisé
+MA_CLE_SECRETE="ab123-cd456-ef789"
+```
+
+**2. Créez votre fichier de configuration JSON** (par exemple, `mes_llms.json`)
+
+Dans ce fichier, vous allez définir votre modèle. Faites attention à deux choses :
+- `api_key_name` doit être le nom exact de votre variable d'environnement.
+- Dans `headers`, utilisez un placeholder avec le même nom (`{MA_CLE_SECRETE}`) pour indiquer où insérer la clé.
+
+```json
+{
+    "mon-gpt-perso": {
+        "service": "openai_compatible",
+        "model_name": "le-nom-de-mon-modele",
+        "endpoint": "https://mon-api.exemple.com/v1",
+        "api_key_name": "MA_CLE_SECRETE",
+        "headers": {
+            "x-api-key": "{MA_CLE_SECRETE}"
+        }
+    }
+}
+```
+
+**3. Indiquez à l'application où trouver ce fichier**
+
+Modifiez la variable `CUSTOM_LLM_CONFIG_PATH` dans votre fichier `.env` :
+
+```env
+CUSTOM_LLM_CONFIG_PATH="mes_llms.json"
+# Ou pour des déploiements type Docker/etc :
+# CUSTOM_LLM_CONFIG_PATH="/etc/secret/mes_llms.json"
+```
+
+L'application chargera automatiquement ce modèle, et vous pourrez l'utiliser dans l'interface ou via l'API avec le nom `"mon-gpt-perso"`.
+=======
 Pour une flexibilité maximale, notamment dans des environnements conteneurisés (Docker, etc.), vous pouvez définir vos propres fournisseurs LLM dans un fichier JSON externe.
 
 1.  **Créez votre fichier de configuration** (par exemple, `my_models.json`). Vous pouvez vous baser sur le fichier `custom_llm.sample.json` fourni.
