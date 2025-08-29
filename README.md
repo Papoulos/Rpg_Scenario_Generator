@@ -118,33 +118,49 @@ Chaque fournisseur est un dictionnaire dans `llm_providers`. Voici les clés pri
 
 ### Ajouter des LLMs personnalisés (Méthode avancée)
 
-Pour une flexibilité maximale, notamment dans des environnements conteneurisés (Docker, etc.), vous pouvez définir vos propres fournisseurs LLM dans un fichier JSON externe.
+Pour une flexibilité maximale, vous pouvez définir vos propres fournisseurs LLM dans un fichier JSON externe. C'est idéal pour les modèles auto-hébergés ou les services qui ne sont pas pré-configurés.
 
-1.  **Créez votre fichier de configuration** (par exemple, `my_models.json`). Vous pouvez vous baser sur le fichier `custom_llm.sample.json` fourni.
+**Exemple complet :**
 
-2.  **Ajoutez la clé API** pour votre modèle dans le fichier `.env`. Par exemple, pour le modèle `"another-custom-model"` du fichier d'exemple :
-    ```env
-    # Clé pour le modèle "another-custom-model"
-    CUSTOM_API_KEY_2="votre_cle_secrete"
-    ```
+Supposons que vous ayez une API personnalisée qui nécessite un en-tête `x-api-key`.
 
-3.  Dans votre fichier JSON, assurez-vous que la valeur de `"api_key_name"` est **exactement le même nom que la variable d'environnement** que vous venez de définir.
-    ```json
-     "api_key_name": "CUSTOM_API_KEY_2",
-     "headers": {
-        "x-api-key": "{api_key}"
-     }
-    ```
-    Le placeholder `{api_key}` sera automatiquement remplacé par la valeur de la variable d'environnement correspondante (`CUSTOM_API_KEY_2` dans cet exemple). Si votre API n'utilise pas l'en-tête `Authorization: Bearer`, c'est la méthode à utiliser.
+**1. Configurez votre clé API dans `.env`**
+```env
+# Ma clé API secrète pour mon service personnalisé
+MA_CLE_SECRETE="ab123-cd456-ef789"
+```
 
-4.  **Spécifiez le chemin** vers votre fichier de configuration personnel dans `.env`.
-    ```env
-    # Chemin vers le fichier JSON contenant les configurations des LLM personnalisés
-    CUSTOM_LLM_CONFIG_PATH="/etc/secret/custom_llm.json"
-    # Ou pour un test local:
-    # CUSTOM_LLM_CONFIG_PATH="custom_llm.json"
-    ```
-L'application chargera automatiquement les modèles de ce fichier au démarrage. Vous pourrez alors les appeler via l'API en utilisant leur nom (ex: `"model": "mon-llm-local"`).
+**2. Créez votre fichier de configuration JSON** (par exemple, `mes_llms.json`)
+
+Dans ce fichier, vous allez définir votre modèle. Faites attention à deux choses :
+- `api_key_name` doit être le nom exact de votre variable d'environnement.
+- Dans `headers`, utilisez un placeholder avec le même nom (`{MA_CLE_SECRETE}`) pour indiquer où insérer la clé.
+
+```json
+{
+    "mon-gpt-perso": {
+        "service": "openai_compatible",
+        "model_name": "le-nom-de-mon-modele",
+        "endpoint": "https://mon-api.exemple.com/v1",
+        "api_key_name": "MA_CLE_SECRETE",
+        "headers": {
+            "x-api-key": "{MA_CLE_SECRETE}"
+        }
+    }
+}
+```
+
+**3. Indiquez à l'application où trouver ce fichier**
+
+Modifiez la variable `CUSTOM_LLM_CONFIG_PATH` dans votre fichier `.env` :
+
+```env
+CUSTOM_LLM_CONFIG_PATH="mes_llms.json"
+# Ou pour des déploiements type Docker/etc :
+# CUSTOM_LLM_CONFIG_PATH="/etc/secret/mes_llms.json"
+```
+
+L'application chargera automatiquement ce modèle, et vous pourrez l'utiliser dans l'interface ou via l'API avec le nom `"mon-gpt-perso"`.
 
 ---
 

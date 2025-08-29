@@ -281,23 +281,24 @@ def test_connection(model_name):
     full_url = f"{base_endpoint.rstrip('/')}/chat/completions"
 
     # --- Start Header Construction ---
-    # This logic mirrors the header construction in chat.py
+    # This logic mirrors the explicit placeholder replacement in chat.py
     final_headers = {"Content-Type": "application/json"}
-
-    api_key_name = provider_config.get('api_key_name')
-    api_key = os.getenv(api_key_name) if api_key_name else ""
 
     custom_headers_config = provider_config.get("headers")
     if custom_headers_config:
-        # If custom headers are defined, use them
         for key, value in custom_headers_config.items():
-            if isinstance(value, str) and value == "{api_key}":
-                final_headers[key] = api_key
-            else:
-                final_headers[key] = value
-    elif api_key:
-        # Otherwise, use the default Authorization header if a key exists
-        final_headers["Authorization"] = f"Bearer {api_key}"
+            placeholders = re.findall(r"\{(.+?)\}", str(value))
+            processed_value = str(value)
+            for placeholder in placeholders:
+                env_value = os.getenv(placeholder, "")
+                processed_value = processed_value.replace(f"{{{placeholder}}}", env_value)
+            final_headers[key] = processed_value
+    else:
+        # Fallback to default Authorization header if no custom headers are defined
+        api_key_name = provider_config.get('api_key_name')
+        api_key = os.getenv(api_key_name) if api_key_name else ""
+        if api_key:
+            final_headers["Authorization"] = f"Bearer {api_key}"
     # --- End Header Construction ---
 
     payload = {
