@@ -1,15 +1,11 @@
-import os
 import re
 from dotenv import load_dotenv
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+from chat import get_llm_instance # Re-use the instance creation logic
 
-# --- 1. Language Model (LLM) Configuration via Google Gemini API ---
+# --- Load Environment Variables ---
 load_dotenv()
-
-if "GOOGLE_API_KEY" not in os.environ:
-    raise ValueError("ERROR: The GOOGLE_API_KEY environment variable is not set.")
 
 def clean_llm_output(text: str) -> str:
     """
@@ -21,11 +17,18 @@ def clean_llm_output(text: str) -> str:
     cleaned_text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
     return cleaned_text.strip()
 
-def generate_scenario(scenario_details: dict, language: str = "English") -> str:
+def generate_scenario(scenario_details: dict, language: str = "English", model_name: str = "gemini-flash") -> str:
     """
-    Generates a complete RPG scenario from the provided details in the specified language.
+    Generates a complete RPG scenario from the provided details in the specified language,
+    using the selected language model.
     """
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.8, convert_system_message_to_human=True)
+    # --- 1. Get the selected LLM instance ---
+    # Default to 'gemini-flash' if the model_name is not provided or invalid
+    try:
+        llm = get_llm_instance(model_name)
+    except (ValueError, KeyError):
+        llm = get_llm_instance("gemini-flash")
+
 
     # --- 2. Definition of Prompts for the Agents ---
 
