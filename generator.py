@@ -222,9 +222,10 @@ def generate_scenario(scenario_details: dict, language: str = "English") -> str:
            - **Memorable**: Short, punchy, with a pun or a strong metaphor if possible.
 
         4. **Output format**:
-        ```markdown
-        # Final Title: **[Unique Title]**
-        ```
+        
+        # **[Unique Title]**
+
+        
         The final output must be in {language}.
         """
     )
