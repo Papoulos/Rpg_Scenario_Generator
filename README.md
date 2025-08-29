@@ -115,22 +115,34 @@ Chaque fournisseur est un dictionnaire dans `llm_providers`. Voici les clés pri
 - `endpoint` (Optionnel): L'URL de base pour les API personnalisées compatibles avec OpenAI.
 - `system_prompt` (Optionnel): Un prompt système par défaut.
 
-### Ajouter un LLM personnalisé
+### Ajouter des LLMs personnalisés (Méthode avancée)
 
-Pour ajouter votre propre bot compatible avec l'API OpenAI :
+Pour une flexibilité maximale, notamment dans des environnements conteneurisés (Docker, etc.), vous pouvez définir vos propres fournisseurs LLM dans un fichier JSON externe.
 
-1.  **Ajoutez sa clé API** dans le fichier `.env` :
+1.  **Créez votre fichier de configuration** (par exemple, `custom_llm.json`). Vous pouvez vous baser sur `custom_llm.sample.json`.
+    ```json
+    {
+        "mon-llm-local": {
+            "service": "openai_compatible",
+            "model_name": "llama3-8b-instruct",
+            "api_key_name": "custom_ollama_key",
+            "endpoint": "http://localhost:11434/v1",
+            "system_prompt": "Vous êtes un assistant local."
+        }
+    }
+    ```
+
+2.  **Ajoutez les clés API** correspondantes dans votre fichier `.env`. Le nom de la variable doit correspondre à la valeur de `api_key_name`.
     ```env
-    CUSTOMBOT_API_KEY="votre_cle_secrete"
+    # Clé pour le LLM personnalisé "mon-llm-local"
+    CUSTOM_OLLAMA_KEY="ollama"
     ```
-2.  **Décommentez et modifiez le modèle** dans `llm_config.py`:
-    ```python
-    'custom-model': {
-        'service': 'openai_compatible',
-        'model_name': 'nom-de-votre-modele',
-        'api_key_name': 'custombot',
-        'endpoint': 'http://VOTRE_URL/v1',
-        'system_prompt': 'Vous êtes un assistant personnalisé.'
-    },
+
+3.  **Spécifiez le chemin** vers votre fichier de configuration dans `.env`.
+    ```env
+    # Chemin vers le fichier JSON contenant les configurations des LLM personnalisés
+    CUSTOM_LLM_CONFIG_PATH="/etc/secret/custom_llm.json"
+    # Ou pour un test local:
+    # CUSTOM_LLM_CONFIG_PATH="custom_llm.json"
     ```
-3.  Vous pouvez maintenant appeler ce modèle en utilisant `"model": "custom-model"` dans vos requêtes API.
+L'application chargera automatiquement les modèles de ce fichier au démarrage. Vous pourrez alors les appeler via l'API en utilisant leur nom (ex: `"model": "mon-llm-local"`).
