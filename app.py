@@ -307,7 +307,8 @@ def test_connection(model_name):
     }
 
     try:
-        response = requests.post(full_url, headers=final_headers, json=payload, timeout=10)
+        timeout = provider_config.get("timeout", 60)
+        response = requests.post(full_url, headers=final_headers, json=payload, timeout=timeout)
 
         return jsonify({
             "status": "request_sent",

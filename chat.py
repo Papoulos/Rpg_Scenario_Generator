@@ -58,15 +58,18 @@ def get_llm_instance(model_name: str):
     # The user is expected to handle the full auth in the custom `headers` field.
     final_api_key = None if custom_headers_config else api_key
 
+    # --- Timeout Configuration ---
+    timeout = provider_config.get("timeout", 60)
+
 
     if service == "google":
-        return ChatGoogleGenerativeAI(model=config_model_name, google_api_key=api_key)
+        return ChatGoogleGenerativeAI(model=config_model_name, google_api_key=api_key, client_options={"timeout": timeout})
 
     elif service == "openai":
-        return ChatOpenAI(model=config_model_name, api_key=final_api_key, extra_headers=extra_headers)
+        return ChatOpenAI(model=config_model_name, api_key=final_api_key, extra_headers=extra_headers, timeout=timeout)
 
     elif service == "mistral":
-        return ChatMistralAI(model=config_model_name, api_key=api_key)
+        return ChatMistralAI(model=config_model_name, api_key=api_key, timeout=timeout)
 
     elif service == "openai_compatible":
         endpoint = provider_config.get("endpoint")
@@ -76,7 +79,8 @@ def get_llm_instance(model_name: str):
             model=config_model_name,
             api_key=final_api_key,
             base_url=endpoint,
-            extra_headers=extra_headers
+            extra_headers=extra_headers,
+            timeout=timeout
         )
 
     else:
