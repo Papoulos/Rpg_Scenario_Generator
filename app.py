@@ -2,6 +2,7 @@ import markdown2
 import re
 import time
 import uuid
+import os
 from bs4 import BeautifulSoup
 from flask import Flask, render_template, request, Response, jsonify
 import requests
@@ -260,6 +261,7 @@ def chat_completions():
 def test_connection(model_name):
     """
     A debugging endpoint to test network connectivity to a model's endpoint.
+    This now simulates a real POST request to the /chat/completions endpoint.
     """
     provider_config = get_provider_config(model_name)
     if not provider_config:
@@ -268,46 +270,55 @@ def test_connection(model_name):
             "message": f"Model '{model_name}' not found in configuration."
         }), 404
 
-    endpoint = provider_config.get("endpoint")
-    if not endpoint:
+    base_endpoint = provider_config.get("endpoint")
+    if not base_endpoint:
         return jsonify({
             "status": "failure",
             "message": f"Model '{model_name}' does not have an endpoint configured."
         }), 400
 
+    # Construct the full URL, ensuring no double slashes
+    full_url = f"{base_endpoint.rstrip('/')}/chat/completions"
+
+    # Get the API key from the correct environment variable
+    api_key_name = provider_config.get('api_key_name')
+    api_key = os.getenv(api_key_name) if api_key_name else ""
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}"
+    }
+    payload = {
+        "model": provider_config.get("model_name", "test"),
+        "messages": [{"role": "user", "content": "test"}]
+    }
+
     try:
-        # We use a HEAD request with a timeout to be efficient.
-        response = requests.head(endpoint, timeout=5)
-        # Check if the status code is something other than a server error (5xx)
-        if response.status_code < 500:
-            return jsonify({
-                "status": "success",
-                "message": f"Successfully connected to endpoint '{endpoint}'.",
-                "status_code": response.status_code,
-                "headers": dict(response.headers),
-            })
-        else:
-             return jsonify({
-                "status": "failure",
-                "message": f"Connected to endpoint, but received a server error.",
-                "status_code": response.status_code,
-            })
+        response = requests.post(full_url, headers=headers, json=payload, timeout=10)
+
+        return jsonify({
+            "status": "request_sent",
+            "message": f"Request sent to {full_url}. The API responded.",
+            "status_code": response.status_code,
+            "response_headers": dict(response.headers),
+            "response_body": response.text,
+        })
 
     except requests.exceptions.Timeout:
         return jsonify({
             "status": "failure",
-            "message": f"Connection to '{endpoint}' timed out after 5 seconds."
+            "message": f"Connection to '{full_url}' timed out after 10 seconds. The server is not responding or a firewall is blocking the request."
         }), 504
     except requests.exceptions.ConnectionError as e:
         return jsonify({
             "status": "failure",
-            "message": f"Failed to establish a connection to '{endpoint}'. Please check if the server is running and accessible from the application's network.",
+            "message": f"Failed to establish a connection to '{full_url}'. Please check the hostname and port. Is the server running and publicly accessible?",
             "error_details": str(e),
         }), 503
     except requests.exceptions.RequestException as e:
         return jsonify({
             "status": "failure",
-            "message": f"An unexpected request error occurred.",
+            "message": f"An unexpected request error occurred for '{full_url}'.",
             "error_details": str(e),
         }), 500
 
