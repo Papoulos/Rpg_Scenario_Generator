@@ -66,7 +66,7 @@ def get_llm_instance(model_name: str):
         return ChatGoogleGenerativeAI(model=config_model_name, google_api_key=api_key, client_options={"timeout": timeout})
 
     elif service == "openai":
-        return ChatOpenAI(model=config_model_name, api_key=final_api_key, extra_headers=extra_headers, timeout=timeout)
+        return ChatOpenAI(model=config_model_name, api_key=final_api_key, client_kwargs={"extra_headers": extra_headers}, timeout=timeout)
 
     elif service == "mistral":
         return ChatMistralAI(model=config_model_name, api_key=api_key, timeout=timeout)
@@ -79,7 +79,7 @@ def get_llm_instance(model_name: str):
             model=config_model_name,
             api_key=final_api_key,
             base_url=endpoint,
-            extra_headers=extra_headers,
+            client_kwargs={"extra_headers": extra_headers},
             timeout=timeout
         )
 
