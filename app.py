@@ -30,13 +30,16 @@ def generate():
     language = request.form.get('language')
     model_name = request.form.get('llm_model')
 
-    # Generate the scenario
-    markdown_output = generate_scenario(scenario_details, language=language, model_name=model_name)
-
-    # Convert markdown to HTML for display
-    html_output = markdown2.markdown(markdown_output, extras=["fenced-code-blocks", "tables"])
-
-    return render_template('result.html', scenario_html=html_output, scenario_markdown=markdown_output)
+    try:
+        # Generate the scenario
+        markdown_output = generate_scenario(scenario_details, language=language, model_name=model_name)
+        # Convert markdown to HTML for display
+        html_output = markdown2.markdown(markdown_output, extras=["fenced-code-blocks", "tables"])
+        return render_template('result.html', scenario_html=html_output, scenario_markdown=markdown_output)
+    except ValueError as e:
+        # Display a user-friendly error message if configuration is missing (e.g., API key)
+        error_message = f"Failed to generate scenario. Configuration error for model '{model_name}': {e}"
+        return render_template('result.html', error=error_message)
 
 def slugify(text):
     """
