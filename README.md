@@ -114,6 +114,7 @@ Chaque fournisseur est un dictionnaire dans `llm_providers`. Voici les clés pri
 - `api_key_name`: La clé correspondante dans votre fichier `.env` (par exemple, `google`, `openai`).
 - `endpoint` (Optionnel): L'URL de base pour les API personnalisées compatibles avec OpenAI.
 - `system_prompt` (Optionnel): Un prompt système par défaut.
+- `headers` (Optionnel): Un dictionnaire pour spécifier des en-têtes HTTP personnalisés (par exemple, pour une authentification non standard).
 
 ### Ajouter des LLMs personnalisés (Méthode avancée)
 
@@ -129,8 +130,12 @@ Pour une flexibilité maximale, notamment dans des environnements conteneurisés
 
 3.  Dans votre fichier JSON, assurez-vous que la valeur de `"api_key_name"` est **exactement le même nom que la variable d'environnement** que vous venez de définir.
     ```json
-     "api_key_name": "CUSTOM_API_KEY_2"
+     "api_key_name": "CUSTOM_API_KEY_2",
+     "headers": {
+        "x-api-key": "{api_key}"
+     }
     ```
+    Le placeholder `{api_key}` sera automatiquement remplacé par la valeur de la variable d'environnement correspondante (`CUSTOM_API_KEY_2` dans cet exemple). Si votre API n'utilise pas l'en-tête `Authorization: Bearer`, c'est la méthode à utiliser.
 
 4.  **Spécifiez le chemin** vers votre fichier de configuration personnel dans `.env`.
     ```env

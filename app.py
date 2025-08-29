@@ -280,21 +280,33 @@ def test_connection(model_name):
     # Construct the full URL, ensuring no double slashes
     full_url = f"{base_endpoint.rstrip('/')}/chat/completions"
 
-    # Get the API key from the correct environment variable
+    # --- Start Header Construction ---
+    # This logic mirrors the header construction in chat.py
+    final_headers = {"Content-Type": "application/json"}
+
     api_key_name = provider_config.get('api_key_name')
     api_key = os.getenv(api_key_name) if api_key_name else ""
 
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {api_key}"
-    }
+    custom_headers_config = provider_config.get("headers")
+    if custom_headers_config:
+        # If custom headers are defined, use them
+        for key, value in custom_headers_config.items():
+            if isinstance(value, str) and value == "{api_key}":
+                final_headers[key] = api_key
+            else:
+                final_headers[key] = value
+    elif api_key:
+        # Otherwise, use the default Authorization header if a key exists
+        final_headers["Authorization"] = f"Bearer {api_key}"
+    # --- End Header Construction ---
+
     payload = {
         "model": provider_config.get("model_name", "test"),
         "messages": [{"role": "user", "content": "test"}]
     }
 
     try:
-        response = requests.post(full_url, headers=headers, json=payload, timeout=10)
+        response = requests.post(full_url, headers=final_headers, json=payload, timeout=10)
 
         return jsonify({
             "status": "request_sent",

@@ -35,11 +35,30 @@ def get_llm_instance(model_name: str):
     if not api_key and api_key_name:
         raise ValueError(f"API key for '{api_key_name}' not found. Please ensure the environment variable '{api_key_name}' is set in your .env file.")
 
+    # --- Header Configuration ---
+    # By default, langchain-openai uses the "Authorization: Bearer <api_key>" header.
+    # If a custom `headers` dict is provided in the config, we use that instead.
+    extra_headers = None
+    custom_headers_config = provider_config.get("headers")
+    if custom_headers_config:
+        extra_headers = {}
+        for key, value in custom_headers_config.items():
+            # Replace placeholder with the actual API key
+            if isinstance(value, str) and value == "{api_key}":
+                extra_headers[key] = api_key
+            else:
+                extra_headers[key] = value
+
+    # For services that use custom headers, we pass the api_key as None to prevent
+    # the default "Authorization" header from being added if it's not needed.
+    final_api_key = None if extra_headers else api_key
+
+
     if service == "google":
         return ChatGoogleGenerativeAI(model=config_model_name, google_api_key=api_key)
 
     elif service == "openai":
-        return ChatOpenAI(model=config_model_name, api_key=api_key)
+        return ChatOpenAI(model=config_model_name, api_key=final_api_key, extra_headers=extra_headers)
 
     elif service == "mistral":
         return ChatMistralAI(model=config_model_name, api_key=api_key)
@@ -50,8 +69,9 @@ def get_llm_instance(model_name: str):
             raise ValueError(f"Endpoint not configured for custom OpenAI compatible model: {model_name}")
         return ChatOpenAI(
             model=config_model_name,
-            api_key=api_key,
-            base_url=endpoint
+            api_key=final_api_key,
+            base_url=endpoint,
+            extra_headers=extra_headers
         )
 
     else:
