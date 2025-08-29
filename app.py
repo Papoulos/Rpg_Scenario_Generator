@@ -7,13 +7,14 @@ from flask import Flask, render_template, request, Response, jsonify
 from weasyprint import HTML
 from generator import generate_scenario
 from chat import run_chat_completion
-from llm_config import get_provider_config
+from llm_config import get_provider_config, llm_providers
 
 app = Flask(__name__)
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    model_names = list(llm_providers.keys())
+    return render_template('index.html', models=model_names)
 
 @app.route('/generate', methods=['POST'])
 def generate():
@@ -27,9 +28,10 @@ def generate():
         "core_idea": request.form.get('core_idea')
     }
     language = request.form.get('language')
+    model_name = request.form.get('llm_model')
 
     # Generate the scenario
-    markdown_output = generate_scenario(scenario_details, language=language)
+    markdown_output = generate_scenario(scenario_details, language=language, model_name=model_name)
 
     # Convert markdown to HTML for display
     html_output = markdown2.markdown(markdown_output, extras=["fenced-code-blocks", "tables"])

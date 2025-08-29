@@ -32,6 +32,13 @@
                 <option value="Greek">Greek</option>
             </select>
 
+            <label for="llm_model">Language Model (LLM)</label>
+            <select id="llm_model" name="llm_model">
+                {% for model in models %}
+                    <option value="{{ model }}" {% if model == 'gemini-flash' %}selected{% endif %}>{{ model }}</option>
+                {% endfor %}
+            </select>
+
             <label for="game_system">Game System</label>
             <input type="text" id="game_system" name="game_system" value="Cyberpunk with the Cypher System" required>
 
