@@ -118,6 +118,7 @@ Chaque fournisseur est un dictionnaire dans `llm_providers`. Voici les clés pri
 
 ### Ajouter des LLMs personnalisés (Méthode avancée)
 
+
 Pour une flexibilité maximale, vous pouvez définir vos propres fournisseurs LLM dans un fichier JSON externe. C'est idéal pour les modèles auto-hébergés ou les services qui ne sont pas pré-configurés.
 
 **Exemple complet :**
@@ -161,6 +162,34 @@ CUSTOM_LLM_CONFIG_PATH="mes_llms.json"
 ```
 
 L'application chargera automatiquement ce modèle, et vous pourrez l'utiliser dans l'interface ou via l'API avec le nom `"mon-gpt-perso"`.
+=======
+Pour une flexibilité maximale, notamment dans des environnements conteneurisés (Docker, etc.), vous pouvez définir vos propres fournisseurs LLM dans un fichier JSON externe.
+
+1.  **Créez votre fichier de configuration** (par exemple, `my_models.json`). Vous pouvez vous baser sur le fichier `custom_llm.sample.json` fourni.
+
+2.  **Ajoutez la clé API** pour votre modèle dans le fichier `.env`. Par exemple, pour le modèle `"another-custom-model"` du fichier d'exemple :
+    ```env
+    # Clé pour le modèle "another-custom-model"
+    CUSTOM_API_KEY_2="votre_cle_secrete"
+    ```
+
+3.  Dans votre fichier JSON, assurez-vous que la valeur de `"api_key_name"` est **exactement le même nom que la variable d'environnement** que vous venez de définir.
+    ```json
+     "api_key_name": "CUSTOM_API_KEY_2",
+     "headers": {
+        "x-api-key": "{api_key}"
+     }
+    ```
+    Le placeholder `{api_key}` sera automatiquement remplacé par la valeur de la variable d'environnement correspondante (`CUSTOM_API_KEY_2` dans cet exemple). Si votre API n'utilise pas l'en-tête `Authorization: Bearer`, c'est la méthode à utiliser.
+
+4.  **Spécifiez le chemin** vers votre fichier de configuration personnel dans `.env`.
+    ```env
+    # Chemin vers le fichier JSON contenant les configurations des LLM personnalisés
+    CUSTOM_LLM_CONFIG_PATH="/etc/secrets/custom_llm.json"
+    # Ou pour un test local:
+    # CUSTOM_LLM_CONFIG_PATH="custom_llm.json"
+    ```
+L'application chargera automatiquement les modèles de ce fichier au démarrage. Vous pourrez alors les appeler via l'API en utilisant leur nom (ex: `"model": "mon-llm-local"`).
 
 ---
 
