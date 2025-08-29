@@ -119,31 +119,20 @@ Chaque fournisseur est un dictionnaire dans `llm_providers`. Voici les clés pri
 
 Pour une flexibilité maximale, notamment dans des environnements conteneurisés (Docker, etc.), vous pouvez définir vos propres fournisseurs LLM dans un fichier JSON externe.
 
-1.  **Créez votre fichier de configuration** (par exemple, `custom_llm.json`). Vous pouvez vous baser sur `custom_llm.sample.json`.
-    ```json
-    {
-        "mon-llm-local": {
-            "service": "openai_compatible",
-            "model_name": "llama3-8b-instruct",
-            "api_key_name": "custom_ollama_key",
-            "endpoint": "http://localhost:11434/v1",
-            "system_prompt": "Vous êtes un assistant local."
-        }
-    }
-    ```
+1.  **Créez votre fichier de configuration** (par exemple, `my_models.json`). Vous pouvez vous baser sur le fichier `custom_llm.sample.json` fourni.
 
-2.  **Ajoutez la clé API** correspondante dans votre fichier `.env`.
+2.  **Ajoutez la clé API** pour votre modèle dans le fichier `.env`. Par exemple, pour le modèle `"another-custom-model"` du fichier d'exemple :
     ```env
-    # Clé pour le LLM personnalisé "mon-llm-local"
-    AMOI_API_KEY="votre_cle_secrete"
+    # Clé pour le modèle "another-custom-model"
+    CUSTOM_API_KEY_2="votre_cle_secrete"
     ```
 
-3.  Dans votre fichier JSON, assurez-vous que la valeur de `"api_key_name"` est **exactement le même nom que la variable d'environnement**.
+3.  Dans votre fichier JSON, assurez-vous que la valeur de `"api_key_name"` est **exactement le même nom que la variable d'environnement** que vous venez de définir.
     ```json
-     "api_key_name": "AMOI_API_KEY",
+     "api_key_name": "CUSTOM_API_KEY_2"
     ```
 
-4.  **Spécifiez le chemin** vers votre fichier de configuration dans `.env`.
+4.  **Spécifiez le chemin** vers votre fichier de configuration personnel dans `.env`.
     ```env
     # Chemin vers le fichier JSON contenant les configurations des LLM personnalisés
     CUSTOM_LLM_CONFIG_PATH="/etc/secret/custom_llm.json"
@@ -158,11 +147,13 @@ L'application chargera automatiquement les modèles de ce fichier au démarrage.
 
 ### Problèmes de Connexion avec un LLM Personnalisé
 
-Si vous rencontrez une `APIConnectionError` ou si vos appels vers un LLM personnalisé ne semblent pas fonctionner, utilisez le point de terminaison de test pour diagnostiquer le problème.
+Si vous rencontrez une `APIConnectionError` ou si vos appels vers un LLM personnalisé ne semblent pas fonctionner, utilisez le point de terminaison de test pour effectuer un diagnostic précis. Ce test simule une requête `POST` réelle vers le point de terminaison `/chat/completions` de votre API.
 
 Accédez à l'URL suivante dans votre navigateur :
 `http://localhost:8000/test-connection/VOTRE_NOM_DE_MODELE`
 
 Remplacez `VOTRE_NOM_DE_MODELE` par le nom de votre modèle personnalisé (ex: `mon-llm-local`).
 
-La réponse JSON vous indiquera si la connexion a réussi ou échoué, et vous donnera des détails sur l'erreur (par exemple, "Connection timed out" ou "Failed to establish a connection"). Cela vous aidera à déterminer s'il s'agit d'un problème de pare-feu, de DNS ou d'accessibilité de votre API.
+La réponse JSON vous donnera un rapport détaillé :
+- **En cas d'échec de connexion** : Elle confirmera un problème réseau (pare-feu, DNS, serveur inaccessible).
+- **Si la connexion réussit** : Elle vous montrera le `status_code` et le `response_body` renvoyés par votre API. Cela vous permettra de voir si votre API renvoie une erreur (par exemple, 401 Unauthorized, 404 Not Found, etc.) lorsque l'application tente de s'y connecter.
