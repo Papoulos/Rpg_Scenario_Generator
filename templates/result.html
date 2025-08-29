@@ -20,16 +20,27 @@
     <div class="container">
         <h1>Your Scenario has been Generated!</h1>
 
-        <div class="toolbar">
-            <form action="/download_pdf" method="post" style="display: inline;">
-                <input type="hidden" name="markdown_content" value="{{ scenario_markdown }}">
-                <button type="submit">Download as PDF</button>
-            </form>
-        </div>
+        {% if error %}
+            <div class="error-box" style="background-color: #f8d7da; color: #721c24; padding: 1em; border: 1px solid #f5c6cb; border-radius: 8px;">
+                <h2>Error Generating Scenario</h2>
+                <p><strong>Please check your configuration.</strong></p>
+                <p>Details: {{ error }}</p>
+                <br>
+                <a href="/" style="text-decoration: none; padding: 0.8em 1.2em; background-color: #007BFF; color: white; border-radius: 4px;">Go Back and Correct</a>
+            </div>
+        {% else %}
+            <div class="toolbar">
+                <form action="/download_pdf" method="post" style="display: inline;">
+                    <input type="hidden" name="markdown_content" value="{{ scenario_markdown }}">
+                    <button type="submit">Download as PDF</button>
+                </form>
+                 <a href="/" style="display: inline-block; text-decoration: none; padding: 0.8em 1.2em; background-color: #007BFF; color: white; border-radius: 4px; font-size: 1em; margin-left: 10px;">Generate Another</a>
+            </div>
 
-        <div class="scenario-content">
-            {{ scenario_html|safe }}
-        </div>
+            <div class="scenario-content">
+                {{ scenario_html|safe }}
+            </div>
+        {% endif %}
     </div>
 </body>
 </html>

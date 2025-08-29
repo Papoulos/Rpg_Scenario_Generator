@@ -23,12 +23,11 @@ def generate_scenario(scenario_details: dict, language: str = "English", model_n
     using the selected language model.
     """
     # --- 1. Get the selected LLM instance ---
-    # Default to 'gemini-flash' if the model_name is not provided or invalid
-    try:
-        llm = get_llm_instance(model_name)
-    except (ValueError, KeyError):
-        llm = get_llm_instance("gemini-flash")
-
+    # If no model name is provided from the frontend, default to gemini-flash.
+    # The get_llm_instance function will raise a ValueError if the model is configured
+    # but the required API key is missing, which will be caught in app.py.
+    selected_model = model_name if model_name else "gemini-flash"
+    llm = get_llm_instance(selected_model)
 
     # --- 2. Definition of Prompts for the Agents ---
 
