@@ -141,7 +141,7 @@ Pour une flexibilité maximale, notamment dans des environnements conteneurisés
 3.  **Spécifiez le chemin** vers votre fichier de configuration dans `.env`.
     ```env
     # Chemin vers le fichier JSON contenant les configurations des LLM personnalisés
-    CUSTOM_LLM_CONFIG_PATH="/etc/secret/custom_llm.json"
+    CUSTOM_LLM_CONFIG_PATH="/etc/secrets/custom_llm.json"
     # Ou pour un test local:
     # CUSTOM_LLM_CONFIG_PATH="custom_llm.json"
     ```
