@@ -1,0 +1,16 @@
+{
+    "my-custom-model": {
+        "service": "openai_compatible",
+        "model_name": "local-llama-model",
+        "api_key_name": "custombot",
+        "endpoint": "http://localhost:11434/v1",
+        "system_prompt": "You are a custom assistant running locally."
+    },
+    "another-custom-model": {
+        "service": "openai_compatible",
+        "model_name": "some-other-model",
+        "api_key_name": "custom_api_key_2",
+        "endpoint": "http://another-api-endpoint/v1",
+        "system_prompt": "You are another custom assistant."
+    }
+}
