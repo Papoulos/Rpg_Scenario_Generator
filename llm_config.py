@@ -29,18 +29,21 @@ llm_providers = {
         "model_name": "gemini-1.5-flash",
         "api_key_name": "google",
         "system_prompt": "You are a helpful assistant powered by Google Gemini.",
+        "timeout": 60,
     },
     "gpt-4": {
         "service": "openai",
         "model_name": "gpt-4",
         "api_key_name": "openai",
         "system_prompt": "You are a helpful assistant powered by OpenAI GPT-4.",
+        "timeout": 60,
     },
     "mistral-large": {
         "service": "mistral",
         "model_name": "mistral-large-latest",
         "api_key_name": "mistral",
         "system_prompt": "You are a helpful assistant powered by Mistral AI.",
+        "timeout": 60,
     },
 }
 

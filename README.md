@@ -115,6 +115,7 @@ Chaque fournisseur est un dictionnaire dans `llm_providers`. Voici les clés pri
 - `endpoint` (Optionnel): L'URL de base pour les API personnalisées compatibles avec OpenAI.
 - `system_prompt` (Optionnel): Un prompt système par défaut.
 - `headers` (Optionnel): Un dictionnaire pour spécifier des en-têtes HTTP personnalisés (par exemple, pour une authentification non standard).
+- `timeout` (Optionnel): Le temps d'attente en secondes pour la réponse de l'API (par défaut 60).
 
 ### Ajouter des LLMs personnalisés (Méthode avancée)
 
