@@ -16,13 +16,7 @@ api_keys = {
     "openai": os.getenv("OPENAI_API_KEY"),
     "mistral": os.getenv("MISTRAL_API_KEY"),
     "custombot": os.getenv("CUSTOMBOT_API_KEY"),
-    # Add any other keys for custom models here, e.g.,
-    # "custom_llm_1_key": os.getenv("CUSTOM_LLM_1_KEY"),
 }
-# Dynamically load any other env vars starting with 'CUSTOM_'
-for key, value in os.environ.items():
-    if key.upper().startswith('CUSTOM_') and key.upper() not in api_keys:
-        api_keys[key.lower()] = value
 
 
 # --- LLM Provider Configuration ---

@@ -132,13 +132,18 @@ Pour une flexibilité maximale, notamment dans des environnements conteneurisés
     }
     ```
 
-2.  **Ajoutez les clés API** correspondantes dans votre fichier `.env`. Le nom de la variable doit correspondre à la valeur de `api_key_name`.
+2.  **Ajoutez la clé API** correspondante dans votre fichier `.env`.
     ```env
     # Clé pour le LLM personnalisé "mon-llm-local"
-    CUSTOM_OLLAMA_KEY="ollama"
+    AMOI_API_KEY="votre_cle_secrete"
     ```
 
-3.  **Spécifiez le chemin** vers votre fichier de configuration dans `.env`.
+3.  Dans votre fichier JSON, assurez-vous que la valeur de `"api_key_name"` est **exactement le même nom que la variable d'environnement**.
+    ```json
+     "api_key_name": "AMOI_API_KEY",
+    ```
+
+4.  **Spécifiez le chemin** vers votre fichier de configuration dans `.env`.
     ```env
     # Chemin vers le fichier JSON contenant les configurations des LLM personnalisés
     CUSTOM_LLM_CONFIG_PATH="/etc/secrets/custom_llm.json"
