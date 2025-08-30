@@ -73,7 +73,7 @@ def get_llm_instance(model_name: str):
         http_client = OpenAI(
             base_url=endpoint,
             api_key=final_api_key,
-            extra_headers=extra_headers,
+            default_headers=extra_headers,
             timeout=timeout,
         ).chat.completions
 
