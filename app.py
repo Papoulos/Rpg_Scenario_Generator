@@ -281,7 +281,6 @@ def test_connection(model_name):
     full_url = f"{base_endpoint.rstrip('/')}/chat/completions"
 
     # --- Start Header Construction ---
-    # This logic mirrors the explicit placeholder replacement in chat.py
     final_headers = {"Content-Type": "application/json"}
 
     custom_headers_config = provider_config.get("headers")
@@ -294,7 +293,6 @@ def test_connection(model_name):
                 processed_value = processed_value.replace(f"{{{placeholder}}}", env_value)
             final_headers[key] = processed_value
     else:
-        # Fallback to default Authorization header if no custom headers are defined
         api_key_name = provider_config.get('api_key_name')
         api_key = os.getenv(api_key_name) if api_key_name else ""
         if api_key:
@@ -307,7 +305,12 @@ def test_connection(model_name):
     }
 
     try:
-        timeout = provider_config.get("timeout", 60)
+        timeout_value = provider_config.get("timeout", 60)
+        try:
+            timeout = float(timeout_value)
+        except (ValueError, TypeError):
+            timeout = 60
+
         response = requests.post(full_url, headers=final_headers, json=payload, timeout=timeout)
 
         return jsonify({
@@ -321,7 +324,7 @@ def test_connection(model_name):
     except requests.exceptions.Timeout:
         return jsonify({
             "status": "failure",
-            "message": f"Connection to '{full_url}' timed out after 10 seconds. The server is not responding or a firewall is blocking the request."
+            "message": f"Connection to '{full_url}' timed out after {timeout} seconds. The server is not responding or a firewall is blocking the request."
         }), 504
     except requests.exceptions.ConnectionError as e:
         return jsonify({
