@@ -3,6 +3,7 @@ import re
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 from langchain_mistralai import ChatMistralAI
+from openai import OpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from llm_config import get_provider_config, api_keys
 
@@ -65,23 +66,25 @@ def get_llm_instance(model_name: str):
     if service == "google":
         return ChatGoogleGenerativeAI(model=config_model_name, google_api_key=api_key, client_options={"timeout": timeout})
 
-    elif service == "openai":
-        return ChatOpenAI(model=config_model_name, api_key=final_api_key, client_kwargs={"extra_headers": extra_headers}, timeout=timeout)
+    elif service in ["openai", "openai_compatible"]:
+        endpoint = provider_config.get("endpoint") # Will be None for standard OpenAI
+
+        # Instantiate the low-level client with all connection/auth details
+        http_client = OpenAI(
+            base_url=endpoint,
+            api_key=final_api_key,
+            extra_headers=extra_headers,
+            timeout=timeout,
+        ).chat.completions
+
+        # Pass the pre-configured client to the LangChain wrapper
+        return ChatOpenAI(
+            model=config_model_name,
+            client=http_client
+        )
 
     elif service == "mistral":
         return ChatMistralAI(model=config_model_name, api_key=api_key, timeout=timeout)
-
-    elif service == "openai_compatible":
-        endpoint = provider_config.get("endpoint")
-        if not endpoint:
-            raise ValueError(f"Endpoint not configured for custom OpenAI compatible model: {model_name}")
-        return ChatOpenAI(
-            model=config_model_name,
-            api_key=final_api_key,
-            base_url=endpoint,
-            client_kwargs={"extra_headers": extra_headers},
-            timeout=timeout
-        )
 
     else:
         raise ValueError(f"Unsupported LLM service: {service}")
