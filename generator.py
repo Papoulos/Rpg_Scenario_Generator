@@ -188,7 +188,7 @@ def generate_scenario(scenario_details: dict, language: str = "English", model_n
                 - What will happen
                 - How the PNJs will react
                 - What are the choices for the players
-            - What are the possible outcome of the scene
+            - What are the possible outcome of the scene and their consequences
             - The NPCs
               - Specific information about the NPCs in this scene: What they want and what they are willing to do
               - Dialogue lines if needed
