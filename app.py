@@ -4,10 +4,10 @@ import time
 import uuid
 import os
 from bs4 import BeautifulSoup
-from flask import Flask, render_template, request, Response, jsonify
+from flask import Flask, render_template, request, Response, jsonify, stream_with_context
 import requests
 from weasyprint import HTML
-from generator import generate_scenario
+from generator import generate_scenario, generate_scenario_stream
 from chat import run_chat_completion
 from llm_config import get_provider_config, llm_providers
 
@@ -20,6 +20,10 @@ def index():
 
 @app.route('/generate', methods=['POST'])
 def generate():
+    """
+    Handles scenario generation.
+    This route now streams the response back to the client.
+    """
     scenario_details = {
         "game_system": request.form.get('game_system'),
         "player_count": request.form.get('player_count'),
@@ -33,15 +37,19 @@ def generate():
     model_name = request.form.get('llm_model')
 
     try:
-        # Generate the scenario
-        markdown_output = generate_scenario(scenario_details, language=language, model_name=model_name)
-        # Convert markdown to HTML for display
-        html_output = markdown2.markdown(markdown_output, extras=["fenced-code-blocks", "tables"])
-        return render_template('result.html', scenario_html=html_output, scenario_markdown=markdown_output)
+        # Use the streaming generator and return a streaming response
+        return Response(stream_with_context(generate_scenario_stream(
+            scenario_details,
+            language=language,
+            model_name=model_name
+        )), mimetype='text/plain')
     except ValueError as e:
-        # Display a user-friendly error message if configuration is missing (e.g., API key)
-        error_message = f"Failed to generate scenario. Configuration error for model '{model_name}': {e}"
-        return render_template('result.html', error=error_message)
+        # In case of a configuration error (e.g., missing API key),
+        # we can't stream, so we return a simple error response.
+        # The frontend will need to handle this.
+        error_message = f"Configuration error for model '{model_name}': {e}"
+        return Response(error_message, status=400)
+
 
 def slugify(text):
     """

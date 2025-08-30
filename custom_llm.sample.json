@@ -1,10 +1,14 @@
 {
     "my-custom-model": {
+        "_comment": "This is an example of a custom model that requires a specific header for authentication, like X-API-Key. The placeholder {CUSTOMBOT_API_KEY} will be replaced by the value of the CUSTOMBOT_API_KEY environment variable. This is often necessary when your API is behind a gateway or Cloudflare.",
         "service": "openai_compatible",
         "model_name": "local-llama-model",
         "api_key_name": "custombot",
         "endpoint": "http://localhost:11434/v1",
-        "system_prompt": "You are a custom assistant running locally."
+        "system_prompt": "You are a custom assistant running locally.",
+        "headers": {
+            "X-API-Key": "{CUSTOMBOT_API_KEY}"
+        }
     },
     "another-custom-model": {
         "service": "openai_compatible",
