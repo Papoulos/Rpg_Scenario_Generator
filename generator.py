@@ -319,15 +319,16 @@ def generate_scenario(scenario_details: dict, language: str = "English", model_n
 
 def generate_scenario_stream(scenario_details: dict, language: str = "English", model_name: str = "gemini-flash"):
     """
-    Generates and streams a complete RPG scenario from the provided details,
-    yielding markdown chunks as they are generated.
+    Generates a scenario by invoking each step of the chain sequentially and
+    yielding the result of each step. This provides "section-by-section" streaming
+    to avoid server timeouts, without requiring the underlying LLM API to support
+    token-based streaming.
     """
     # --- 1. Get the selected LLM instance ---
     selected_model = model_name if model_name else "gemini-flash"
     llm = get_llm_instance(selected_model)
 
     # --- 2. Prompt Definitions (same as in the non-streaming version) ---
-    # NOTE: In a real-world app, you'd refactor this to avoid duplication.
     prompt_synopsis = ChatPromptTemplate.from_template(
         """
         You are a scriptwriter and you know how to articulate a story from various elements.
@@ -355,7 +356,6 @@ def generate_scenario_stream(scenario_details: dict, language: str = "English", 
         The final output must be in {language}.
         """
     )
-
     prompt_scenario_designer = ChatPromptTemplate.from_template(
         """
         **Role**:
@@ -392,7 +392,6 @@ def generate_scenario_stream(scenario_details: dict, language: str = "English", 
         The final output must be in {language}.
        """
     )
-
     prompt_npc_creator = ChatPromptTemplate.from_template(
         """
         **Role**:
@@ -438,7 +437,6 @@ def generate_scenario_stream(scenario_details: dict, language: str = "English", 
         The final output must be in {language}.
         """
     )
-
     prompt_location_creator = ChatPromptTemplate.from_template(
         """
         **Role**:
@@ -464,7 +462,6 @@ def generate_scenario_stream(scenario_details: dict, language: str = "English", 
         The final output must be in {language}.
         """
     )
-
     prompt_scene_developer = ChatPromptTemplate.from_template(
         """
         **Role**:
@@ -494,7 +491,6 @@ def generate_scenario_stream(scenario_details: dict, language: str = "English", 
         The final output must be in {language}.
         """
     )
-
     prompt_title_generator = ChatPromptTemplate.from_template(
         """
         **Role**:
@@ -536,74 +532,69 @@ def generate_scenario_stream(scenario_details: dict, language: str = "English", 
     chain_scene_developer = prompt_scene_developer | llm | StrOutputParser()
     chain_title_generator = prompt_title_generator | llm | StrOutputParser()
 
-    # --- 4. Streaming Generation ---
-    # We accumulate the full content of each step to pass to the next.
-    # The `clean_llm_output` function is not used on chunks to avoid stripping issues.
-    # It can be applied to the full content on the client-side if needed.
+    # --- 4. Section-by-Section Generation and Streaming ---
 
     # Yield a placeholder for the title that the frontend will replace.
     yield "# Rpg-Home\n\n"
 
-    full_synopsis = ""
+    # Step 0: Create the synopsis
     yield "## Synopsis\n\n"
-    for chunk in chain_synopsis.stream({**scenario_details, "language": language}):
-        full_synopsis += chunk
-        yield chunk
+    full_synopsis = chain_synopsis.invoke({**scenario_details, "language": language})
+    full_synopsis = clean_llm_output(full_synopsis)
+    yield full_synopsis
     yield "\n\n"
 
-    full_scenario = ""
+    # Step 1: Structure the scenario
     yield "## Game Master's Interaction Guide\n\n"
     yield "*Here is the sequence of situations the players will encounter and how the world might react to their actions. This version has been revised and corrected for consistency.*\n\n"
-    for chunk in chain_scenario_designer.stream({
+    full_scenario = chain_scenario_designer.invoke({
         "synopsis": full_synopsis, "game_system": scenario_details["game_system"],
         "player_count": scenario_details["player_count"], "language": language
-    }):
-        full_scenario += chunk
-        yield chunk
+    })
+    full_scenario = clean_llm_output(full_scenario)
+    yield full_scenario
     yield "\n\n"
 
-    full_npcs = ""
+    # Step 2: Create the NPCs
     yield "## Key Characters\n\n"
     yield "### Main NPCs\n*The major players in this story.*\n\n"
-    for chunk in chain_npc_creator.stream({
+    full_npcs = chain_npc_creator.invoke({
         "scenario": full_scenario, "game_system": scenario_details["game_system"],
         "constraints": scenario_details["constraints"], "language": language
-    }):
-        full_npcs += chunk
-        yield chunk
+    })
+    full_npcs = clean_llm_output(full_npcs)
+    yield full_npcs
     yield "\n\n"
 
-    full_locations = ""
+    # Step 3: Create the Locations
     yield "## Important Locations\n\n"
     yield "*The main settings where the action will take place.*\n\n"
-    for chunk in chain_location_creator.stream({
+    full_locations = chain_location_creator.invoke({
         "scenario": full_scenario, "npc_sheets": full_npcs,
         "theme_tone": scenario_details["theme_tone"], "constraints": scenario_details["constraints"],
         "language": language
-    }):
-        full_locations += chunk
-        yield chunk
+    })
+    full_locations = clean_llm_output(full_locations)
+    yield full_locations
     yield "\n\n"
 
-    full_scenes = ""
+    # Step 4: Flesh out the scenes
     # The scene developer prompt uses 'npc' not 'npc_sheets'
-    for chunk in chain_scene_developer.stream({
+    full_scenes = chain_scene_developer.invoke({
         "scenario": full_scenario, "npc": full_npcs, "locations": full_locations,
         "theme_tone": scenario_details["theme_tone"], "constraints": scenario_details["constraints"],
         "language": language
-    }):
-        full_scenes += chunk
-        yield chunk
+    })
+    full_scenes = clean_llm_output(full_scenes)
+    yield full_scenes
     yield "\n\n"
 
-    # Finally, generate the title and yield it with a special marker for the client.
-    title_stream = chain_title_generator.stream({
+    # Step 5: Generate the title and yield it with a special marker for the client.
+    full_title = chain_title_generator.invoke({
         "scenario": full_scenario, "scenes": full_scenes,
         "theme_tone": scenario_details["theme_tone"], "language": language
     })
-    full_title = ""
-    for chunk in title_stream:
-        full_title += chunk
+    full_title = clean_llm_output(full_title)
 
     # Remove markdown formatting from the title before sending
     final_title = full_title.replace("# Final Title: ", "").replace("*", "").strip()
