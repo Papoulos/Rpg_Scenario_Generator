@@ -38,38 +38,33 @@ def get_llm_instance(model_name: str):
         raise ValueError(f"API key for '{api_key_name}' not found. Please ensure the environment variable '{api_key_name}' is set in your .env file.")
 
     # --- Header Configuration ---
-    # By default, langchain-openai uses the "Authorization: Bearer <api_key>" header.
-    # If a custom `headers` dict is provided in the config, we process it.
     extra_headers = None
     custom_headers_config = provider_config.get("headers")
     if custom_headers_config:
         extra_headers = {}
         for key, value in custom_headers_config.items():
-            # Find all placeholders like {VAR_NAME} in the header value
             placeholders = re.findall(r"\{(.+?)\}", str(value))
             processed_value = str(value)
             for placeholder in placeholders:
-                # Get the value from environment and replace the placeholder
-                env_value = os.getenv(placeholder, "") # Default to empty string if not found
+                env_value = os.getenv(placeholder, "")
                 processed_value = processed_value.replace(f"{{{placeholder}}}", env_value)
             extra_headers[key] = processed_value
 
-    # For services that use custom headers, we pass the api_key as None to prevent
-    # the default "Authorization" header from being added automatically by the client.
-    # The user is expected to handle the full auth in the custom `headers` field.
     final_api_key = None if custom_headers_config else api_key
 
     # --- Timeout Configuration ---
-    timeout = provider_config.get("timeout", 60)
-
+    timeout_value = provider_config.get("timeout", 60)
+    try:
+        timeout = float(timeout_value)
+    except (ValueError, TypeError):
+        timeout = 60
 
     if service == "google":
         return ChatGoogleGenerativeAI(model=config_model_name, google_api_key=api_key, client_options={"timeout": timeout})
 
     elif service in ["openai", "openai_compatible"]:
-        endpoint = provider_config.get("endpoint") # Will be None for standard OpenAI
+        endpoint = provider_config.get("endpoint")
 
-        # Instantiate the low-level client with all connection/auth details
         http_client = OpenAI(
             base_url=endpoint,
             api_key=final_api_key,
@@ -77,7 +72,6 @@ def get_llm_instance(model_name: str):
             timeout=timeout,
         ).chat.completions
 
-        # Pass the pre-configured client to the LangChain wrapper
         return ChatOpenAI(
             model=config_model_name,
             client=http_client
