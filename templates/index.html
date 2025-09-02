@@ -7,15 +7,35 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         body { font-family: sans-serif; margin: 2em; background-color: #f4f4f4; }
-        .container { max-width: 800px; margin: auto; background: white; padding: 2em; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .container { max-width: 1400px; margin: auto; background: white; padding: 2em; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
         h1 { text-align: center; color: #333; }
+
+        .main-content {
+            display: flex;
+            gap: 2em;
+        }
+        .form-container {
+            flex: 0 0 40%;
+        }
+        .result-display {
+            flex: 1;
+            /* Make the result area scrollable if content overflows */
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 1em;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: #fafafa;
+        }
+
         label { display: block; margin-top: 1em; font-weight: bold; color: #555; }
         input, textarea, select { width: 100%; padding: 0.5em; margin-top: 0.5em; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
         textarea { height: 100px; }
         button { display: block; width: 100%; padding: 1em; margin-top: 2em; background-color: #007BFF; color: white; border: none; border-radius: 4px; font-size: 1.2em; cursor: pointer; }
         button:hover { background-color: #0056b3; }
         button:disabled { background-color: #cccccc; cursor: not-allowed; }
-        #result-container { margin-top: 2em; padding: 1em; border: 1px solid #ddd; border-radius: 4px; background: #fafafa; }
+        /* Adjusted result container to remove margin, as the parent handles spacing */
+        #result-container { padding: 1em; border: 1px solid #ddd; border-radius: 4px; background: #fafafa; }
         #result-html { min-height: 100px; }
         #spinner { display: none; margin: 2em auto; width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -24,60 +44,65 @@
 <body>
     <div class="container">
         <h1>RPG Scenario Generator</h1>
-        <form id="scenario-form">
-            <label for="language">Output Language</label>
-            <select id="language" name="language">
-                <option value="English" selected>English</option>
-                <option value="German">German</option>
-                <option value="French">French</option>
-                <option value="Turkish">Turkish</option>
-                <option value="Italian">Italian</option>
-                <option value="Spanish">Spanish</option>
-                <option value="Polish">Polish</option>
-                <option value="Dutch">Dutch</option>
-                <option value="Greek">Greek</option>
-            </select>
+        <div class="main-content">
+            <div class="form-container">
+                <form id="scenario-form">
+                    <label for="language">Output Language</label>
+                    <select id="language" name="language">
+                        <option value="English" selected>English</option>
+                        <option value="German">German</option>
+                        <option value="French">French</option>
+                        <option value="Turkish">Turkish</option>
+                        <option value="Italian">Italian</option>
+                        <option value="Spanish">Spanish</option>
+                        <option value="Polish">Polish</option>
+                        <option value="Dutch">Dutch</option>
+                        <option value="Greek">Greek</option>
+                    </select>
 
-            <label for="llm_model">Language Model (LLM)</label>
-            <select id="llm_model" name="llm_model">
-                {% for model in models %}
-                    <option value="{{ model }}" {% if model == 'gemini-flash' %}selected{% endif %}>{{ model }}</option>
-                {% endfor %}
-            </select>
+                    <label for="llm_model">Language Model (LLM)</label>
+                    <select id="llm_model" name="llm_model">
+                        {% for model in models %}
+                            <option value="{{ model }}" {% if model == 'gemini-flash' %}selected{% endif %}>{{ model }}</option>
+                        {% endfor %}
+                    </select>
 
-            <label for="game_system">Game System</label>
-            <input type="text" id="game_system" name="game_system" value="Cyberpunk with the Cypher System" required>
+                    <label for="game_system">Game System</label>
+                    <input type="text" id="game_system" name="game_system" value="Cyberpunk with the Cypher System" required>
 
-            <label for="player_count">Number of Players</label>
-            <input type="text" id="player_count" name="player_count" value="4 players" required>
+                    <label for="player_count">Number of Players</label>
+                    <input type="text" id="player_count" name="player_count" value="4 players" required>
 
-            <label for="theme_tone">Theme and Tone</label>
-            <input type="text" id="theme_tone" name="theme_tone" value="Action, horror" required>
+                    <label for="theme_tone">Theme and Tone</label>
+                    <input type="text" id="theme_tone" name="theme_tone" value="Action, horror" required>
 
-            <label for="core_idea">Core Idea</label>
-            <textarea id="core_idea" name="core_idea" required>One of their relatives is sick because of a new drug on the market, they will investigate.</textarea>
+                    <label for="core_idea">Core Idea</label>
+                    <textarea id="core_idea" name="core_idea" required>One of their relatives is sick because of a new drug on the market, they will investigate.</textarea>
 
-            <label for="constraints">Constraints</label>
-            <textarea id="constraints" name="constraints">One of their new allies will be the real villain</textarea>
+                    <label for="constraints">Constraints</label>
+                    <textarea id="constraints" name="constraints">One of their new allies will be the real villain</textarea>
 
-            <label for="key_elements">Key Elements</label>
-            <textarea id="key_elements" name="key_elements">betrayal and manipulation</textarea>
+                    <label for="key_elements">Key Elements</label>
+                    <textarea id="key_elements" name="key_elements">betrayal and manipulation</textarea>
 
-            <label for="elements_to_avoid">Elements to Avoid</label>
-            <textarea id="elements_to_avoid" name="elements_to_avoid"></textarea>
+                    <label for="elements_to_avoid">Elements to Avoid</label>
+                    <textarea id="elements_to_avoid" name="elements_to_avoid"></textarea>
 
-            <button type="submit">Generate Scenario</button>
-        </form>
+                    <button type="submit">Suivant</button>
+                </form>
+            </div>
+            <div class="result-display">
+                <div id="spinner"></div>
 
-        <div id="spinner"></div>
-
-        <div id="result-container" style="display: none;">
-            <h2>Generated Scenario</h2>
-            <div id="result-html"></div>
-            <form action="/download_pdf" method="post" id="pdf-form" style="display: none; margin-top: 1em;">
-                <input type="hidden" name="markdown_content" id="markdown_content">
-                <button type="submit">Download as PDF</button>
-            </form>
+                <div id="result-container" style="display: none;">
+                    <h2>Generated Scenario</h2>
+                    <div id="result-html"></div>
+                    <form action="/download_pdf" method="post" id="pdf-form" style="display: none; margin-top: 1em;">
+                        <input type="hidden" name="markdown_content" id="markdown_content">
+                        <button type="submit">Download as PDF</button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -90,16 +115,41 @@
         const markdownContentInput = document.getElementById('markdown_content');
         const submitButton = form.querySelector('button[type="submit"]');
 
+        let scenarioSteps = [];
+        let currentStep = 0;
+        let fullMarkdownContent = '';
+
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
 
-            // --- Reset and show UI elements ---
+            // If steps are already generated, just show the next one
+            if (scenarioSteps.length > 0) {
+                currentStep++;
+                if (currentStep < scenarioSteps.length) {
+                    // Append the next step and render
+                    fullMarkdownContent += scenarioSteps[currentStep];
+                    resultHtml.innerHTML = marked.parse(fullMarkdownContent);
+                }
+
+                if (currentStep >= scenarioSteps.length - 1) {
+                    // Last step reached
+                    submitButton.textContent = 'Génération terminée';
+                    submitButton.disabled = true;
+                    pdfForm.style.display = 'block';
+                    markdownContentInput.value = fullMarkdownContent;
+                }
+                 // Scroll to the bottom
+                resultContainer.scrollTop = resultContainer.scrollHeight;
+                return;
+            }
+
+            // --- First click: Fetch and process the whole scenario ---
             submitButton.disabled = true;
             spinner.style.display = 'block';
-            resultContainer.style.display = 'block';
+            resultContainer.style.display = 'block'; // Show the result area
             resultHtml.innerHTML = '';
             pdfForm.style.display = 'none';
-            let fullMarkdown = '';
+            let accumulatedMarkdown = '';
             let finalTitle = '';
 
             try {
@@ -117,48 +167,57 @@
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
 
+                // Accumulate the entire stream
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
-
-                    const chunk = decoder.decode(value, { stream: true });
-
-                    // Check for our special end-of-stream marker
-                    if (chunk.includes('STREAM_ENDED_FINAL_TITLE:')) {
-                        const parts = chunk.split('STREAM_ENDED_FINAL_TITLE:');
-                        const contentPart = parts[0];
-                        finalTitle = parts[1];
-
-                        fullMarkdown += contentPart;
-                        resultHtml.innerHTML = marked.parse(fullMarkdown);
-
-                        break; // Stop processing after the marker
-                    } else {
-                        fullMarkdown += chunk;
-                        resultHtml.innerHTML = marked.parse(fullMarkdown);
-                    }
-                     // Scroll to the bottom to keep the latest content in view
-                    resultContainer.scrollTop = resultContainer.scrollHeight;
+                    accumulatedMarkdown += decoder.decode(value, { stream: true });
                 }
 
-                // --- Finalize UI ---
-                // Replace the placeholder title with the final one.
-                const h1 = resultHtml.querySelector('h1');
-                if (h1) {
-                    h1.textContent = finalTitle;
-                    // Also update the full markdown for the PDF
-                    fullMarkdown = fullMarkdown.replace(/# Rpg-Home/g, `# ${finalTitle}`);
+                // Check for our special end-of-stream marker and extract title
+                if (accumulatedMarkdown.includes('STREAM_ENDED_FINAL_TITLE:')) {
+                    const parts = accumulatedMarkdown.split('STREAM_ENDED_FINAL_TITLE:');
+                    accumulatedMarkdown = parts[0];
+                    finalTitle = parts[1].trim();
                 }
 
-                markdownContentInput.value = fullMarkdown;
-                pdfForm.style.display = 'block';
+                 // Replace placeholder title with the final one.
+                if (finalTitle) {
+                   accumulatedMarkdown = accumulatedMarkdown.replace(/# Rpg-Home/g, `# ${finalTitle}`);
+                }
+
+                // Split the full markdown into steps based on H2 headings (##)
+                // The regex uses a positive lookahead to keep the delimiter (the heading) in the resulting array.
+                scenarioSteps = accumulatedMarkdown.split(/(?=^##\s)/m).filter(s => s.trim() !== '');
+                if (scenarioSteps.length === 0) {
+                    // Fallback if no H2s are found, just treat the whole thing as one step
+                    scenarioSteps.push(accumulatedMarkdown);
+                }
+
+
+                // --- Display the first step ---
+                currentStep = 0;
+                fullMarkdownContent = scenarioSteps[0];
+                resultHtml.innerHTML = marked.parse(fullMarkdownContent);
+
+                // Check if there's only one step
+                if (scenarioSteps.length <= 1) {
+                    submitButton.textContent = 'Génération terminée';
+                    submitButton.disabled = true;
+                    pdfForm.style.display = 'block';
+                    markdownContentInput.value = fullMarkdownContent;
+                } else {
+                    submitButton.disabled = false; // Re-enable for "Suivant" clicks
+                }
 
             } catch (error) {
                 resultHtml.innerHTML = `<p style="color: red;"><strong>Error:</strong> ${error.message}</p>`;
                 console.error('Generation failed:', error);
+                submitButton.textContent = 'Erreur';
             } finally {
                 spinner.style.display = 'none';
-                submitButton.disabled = false;
+                 // Scroll to the bottom
+                resultContainer.scrollTop = resultContainer.scrollHeight;
             }
         });
     </script>
