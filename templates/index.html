@@ -115,109 +115,115 @@
         const markdownContentInput = document.getElementById('markdown_content');
         const submitButton = form.querySelector('button[type="submit"]');
 
-        let scenarioSteps = [];
-        let currentStep = 0;
-        let fullMarkdownContent = '';
+        // --- State Management ---
+        const generationSequence = ['synopsis', 'scenario', 'npcs', 'locations', 'scenes', 'title'];
+        const buttonLabels = {
+            'synopsis': 'Générer le Synopsis',
+            'scenario': 'Détailler le Scénario',
+            'npcs': 'Créer les PNJ',
+            'locations': 'Décrire les Lieux',
+            'scenes': 'Développer les Scènes',
+            'title': 'Générer le Titre'
+        };
+        let currentStepIndex = 0;
+        let generatedContent = {}; // Stores the complete text of each generated step
+        let initialFormDetails = {};
+        let isGenerating = false;
 
+        // --- Main Handler ---
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
+            if (isGenerating) return;
 
-            // If steps are already generated, just show the next one
-            if (scenarioSteps.length > 0) {
-                currentStep++;
-                if (currentStep < scenarioSteps.length) {
-                    // Append the next step and render
-                    fullMarkdownContent += scenarioSteps[currentStep];
-                    resultHtml.innerHTML = marked.parse(fullMarkdownContent);
-                }
-
-                if (currentStep >= scenarioSteps.length - 1) {
-                    // Last step reached
-                    submitButton.textContent = 'Génération terminée';
-                    submitButton.disabled = true;
-                    pdfForm.style.display = 'block';
-                    markdownContentInput.value = fullMarkdownContent;
-                }
-                 // Scroll to the bottom
-                resultContainer.scrollTop = resultContainer.scrollHeight;
-                return;
-            }
-
-            // --- First click: Fetch and process the whole scenario ---
+            isGenerating = true;
             submitButton.disabled = true;
             spinner.style.display = 'block';
-            resultContainer.style.display = 'block'; // Show the result area
-            resultHtml.innerHTML = '';
-            pdfForm.style.display = 'none';
-            let accumulatedMarkdown = '';
-            let finalTitle = '';
+
+            // --- On first click, capture form data and disable form ---
+            if (currentStepIndex === 0) {
+                resultContainer.style.display = 'block';
+                const formData = new FormData(form);
+                initialFormDetails = Object.fromEntries(formData.entries());
+                // Disable form fields
+                Array.from(form.elements).forEach(el => el.disabled = true);
+                submitButton.disabled = false; // Re-enable the submit button itself
+            }
+
+            const stepName = generationSequence[currentStepIndex];
 
             try {
-                const formData = new FormData(form);
                 const response = await fetch('/generate', {
                     method: 'POST',
-                    body: formData,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        step: stepName,
+                        model_name: initialFormDetails.llm_model,
+                        language: initialFormDetails.language,
+                        details: initialFormDetails,
+                        context: generatedContent // Send context from previous steps
+                    }),
                 });
 
                 if (!response.ok) {
                     const errorText = await response.text();
-                    throw new Error(`Server error: ${response.status} ${response.statusText}. ${errorText}`);
+                    throw new Error(`Server error: ${response.status}. ${errorText}`);
                 }
 
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
+                let currentStepText = '';
 
-                // Accumulate the entire stream
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
-                    accumulatedMarkdown += decoder.decode(value, { stream: true });
+
+                    const chunk = decoder.decode(value, { stream: true });
+
+                    // Handle the special title marker at the end of the final step
+                    if (chunk.includes('STREAM_ENDED_FINAL_TITLE:')) {
+                        const parts = chunk.split('STREAM_ENDED_FINAL_TITLE:');
+                        currentStepText += parts[0];
+                        resultHtml.innerHTML = marked.parse(Object.values(generatedContent).join('\n\n') + currentStepText);
+                        const finalTitle = parts[1].trim();
+                        // Update the H1 placeholder in the displayed content
+                        const h1 = resultHtml.querySelector('h1');
+                        if (h1) h1.textContent = finalTitle;
+                        break;
+                    } else {
+                        currentStepText += chunk;
+                        // Update the view with all previous content plus the current stream
+                        resultHtml.innerHTML = marked.parse(Object.values(generatedContent).join('\n\n') + currentStepText);
+                    }
+                    resultContainer.scrollTop = resultContainer.scrollHeight;
                 }
 
-                // Check for our special end-of-stream marker and extract title
-                if (accumulatedMarkdown.includes('STREAM_ENDED_FINAL_TITLE:')) {
-                    const parts = accumulatedMarkdown.split('STREAM_ENDED_FINAL_TITLE:');
-                    accumulatedMarkdown = parts[0];
-                    finalTitle = parts[1].trim();
-                }
+                // Store the complete text for the current step
+                generatedContent[stepName] = currentStepText;
 
-                 // Replace placeholder title with the final one.
-                if (finalTitle) {
-                   accumulatedMarkdown = accumulatedMarkdown.replace(/# Rpg-Home/g, `# ${finalTitle}`);
-                }
-
-                // Split the full markdown into steps based on H2 headings (##)
-                // The regex uses a positive lookahead to keep the delimiter (the heading) in the resulting array.
-                scenarioSteps = accumulatedMarkdown.split(/(?=^##\s)/m).filter(s => s.trim() !== '');
-                if (scenarioSteps.length === 0) {
-                    // Fallback if no H2s are found, just treat the whole thing as one step
-                    scenarioSteps.push(accumulatedMarkdown);
-                }
-
-
-                // --- Display the first step ---
-                currentStep = 0;
-                fullMarkdownContent = scenarioSteps[0];
-                resultHtml.innerHTML = marked.parse(fullMarkdownContent);
-
-                // Check if there's only one step
-                if (scenarioSteps.length <= 1) {
-                    submitButton.textContent = 'Génération terminée';
-                    submitButton.disabled = true;
-                    pdfForm.style.display = 'block';
-                    markdownContentInput.value = fullMarkdownContent;
+                // --- Prepare for next step or finish ---
+                currentStepIndex++;
+                if (currentStepIndex < generationSequence.length) {
+                    const nextStepName = generationSequence[currentStepIndex];
+                    submitButton.textContent = buttonLabels[nextStepName] || 'Suivant';
                 } else {
-                    submitButton.disabled = false; // Re-enable for "Suivant" clicks
+                    submitButton.textContent = 'Génération Terminée';
+                    submitButton.disabled = true;
+                    // Prepare and show PDF download form
+                    markdownContentInput.value = Object.values(generatedContent).join('\n\n');
+                    pdfForm.style.display = 'block';
                 }
 
             } catch (error) {
-                resultHtml.innerHTML = `<p style="color: red;"><strong>Error:</strong> ${error.message}</p>`;
+                resultHtml.innerHTML += `<p style="color: red;"><strong>Error:</strong> ${error.message}</p>`;
                 console.error('Generation failed:', error);
                 submitButton.textContent = 'Erreur';
+                // Don't disable permanently on error, allow retry
             } finally {
+                isGenerating = false;
                 spinner.style.display = 'none';
-                 // Scroll to the bottom
-                resultContainer.scrollTop = resultContainer.scrollHeight;
+                if (currentStepIndex < generationSequence.length) {
+                    submitButton.disabled = false;
+                }
             }
         });
     </script>
