@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 from flask import Flask, render_template, request, Response, jsonify, stream_with_context
 import requests
 from weasyprint import HTML
-from generator import generate_scenario, generate_scenario_stream
+from generator import generate_scenario_stream
 from chat import run_chat_completion
 from llm_config import get_provider_config, llm_providers
 
