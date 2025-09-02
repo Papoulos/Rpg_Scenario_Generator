@@ -7,8 +7,8 @@ from bs4 import BeautifulSoup
 from flask import Flask, render_template, request, Response, jsonify, stream_with_context
 import requests
 from weasyprint import HTML
-from generator import generate_scenario_stream
-from chat import run_chat_completion
+import generator
+from chat import run_chat_completion, get_llm_instance
 from llm_config import get_provider_config, llm_providers
 
 app = Flask(__name__)
@@ -21,34 +21,56 @@ def index():
 @app.route('/generate', methods=['POST'])
 def generate():
     """
-    Handles scenario generation.
-    This route now streams the response back to the client.
+    Handles step-by-step scenario generation.
+    Receives the current step and context, and calls the appropriate generator function.
     """
-    scenario_details = {
-        "game_system": request.form.get('game_system'),
-        "player_count": request.form.get('player_count'),
-        "theme_tone": request.form.get('theme_tone'),
-        "constraints": request.form.get('constraints'),
-        "key_elements": request.form.get('key_elements'),
-        "elements_to_avoid": request.form.get('elements_to_avoid'),
-        "core_idea": request.form.get('core_idea')
+    data = request.get_json()
+    if not data:
+        return Response("Error: Invalid JSON payload.", status=400)
+
+    step = data.get('step')
+    model_name = data.get('model_name')
+    language = data.get('language')
+    scenario_details = data.get('details')
+    context = data.get('context', {})
+
+    if not all([step, model_name, language, scenario_details]):
+        return Response("Error: Missing required parameters in JSON payload.", status=400)
+
+    # --- Map step name to generator function ---
+    step_functions = {
+        'synopsis': generator.generate_synopsis_step,
+        'scenario': generator.generate_scenario_step,
+        'npcs': generator.generate_npcs_step,
+        'locations': generator.generate_locations_step,
+        'scenes': generator.generate_scenes_step,
+        'title': generator.generate_title_step,
     }
-    language = request.form.get('language')
-    model_name = request.form.get('llm_model')
+
+    if step not in step_functions:
+        return Response(f"Error: Invalid step '{step}' provided.", status=400)
 
     try:
-        # Use the streaming generator and return a streaming response
-        return Response(stream_with_context(generate_scenario_stream(
-            scenario_details,
+        llm = get_llm_instance(model_name)
+        generation_function = step_functions[step]
+
+        # Call the appropriate function with its required arguments
+        stream = generation_function(
+            llm=llm,
             language=language,
-            model_name=model_name
-        )), mimetype='text/plain')
+            scenario_details=scenario_details,
+            context=context
+        )
+
+        return Response(stream_with_context(stream), mimetype='text/plain')
+
     except ValueError as e:
-        # In case of a configuration error (e.g., missing API key),
-        # we can't stream, so we return a simple error response.
-        # The frontend will need to handle this.
+        # Catches configuration errors from get_llm_instance
         error_message = f"Configuration error for model '{model_name}': {e}"
         return Response(error_message, status=400)
+    except Exception as e:
+        app.logger.error(f"An unexpected error occurred during generation: {e}")
+        return Response("An internal server error occurred.", status=500)
 
 
 def slugify(text):
