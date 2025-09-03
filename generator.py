@@ -223,27 +223,27 @@ def agent_1_list_items(llm, language, scenario_details, context=None):
     # The output of this agent is expected to be a JSON string, so we return it directly.
     return invoke_llm(llm, prompt_agent_1, {"synopsis": synopsis, "language": language})
 
-def agent_2_detail_npc(llm, language, context):
+def agent_2_detail_npc(llm, language, scenario_details, context):
     """
     Agent 2: Creates a detailed sheet for a single NPC.
     """
-    synopsis = context.get('synopsis', '')
+    synopsis = scenario_details
     npc_name = context.get('item_name', '') # The item to detail is passed in context
     return invoke_llm(llm, prompt_agent_2, {"synopsis": synopsis, "npc_name": npc_name, "language": language})
 
-def agent_3_detail_location(llm, language, context):
+def agent_3_detail_location(llm, language, scenario_details, context):
     """
     Agent 3: Creates a detailed sheet for a single location.
     """
-    synopsis = context.get('synopsis', '')
+    synopsis = scenario_details
     location_name = context.get('item_name', '') # The item to detail is passed in context
     return invoke_llm(llm, prompt_agent_3, {"synopsis": synopsis, "location_name": location_name, "language": language})
 
-def agent_4_outline_scenes(llm, language, context):
+def agent_4_outline_scenes(llm, language, scenario_details, context):
     """
     Agent 4: Creates a list of scene titles.
     """
-    synopsis = context.get('synopsis', '')
+    synopsis = scenario_details
     npcs = "\n".join(context.get('detailed_npcs', []))
     locations = "\n".join(context.get('detailed_locations', []))
     return invoke_llm(llm, prompt_agent_4, {"synopsis": synopsis, "npcs": npcs, "locations": locations, "language": language})
@@ -308,11 +308,11 @@ prompt_agent_7 = ChatPromptTemplate.from_template(
     """
 )
 
-def agent_5_detail_scene(llm, language, context):
+def agent_5_detail_scene(llm, language, scenario_details, context):
     """
     Agent 5: Creates a detailed sheet for a single scene.
     """
-    synopsis = context.get('synopsis', '')
+    synopsis = scenario_details
     npcs = "\n".join(context.get('detailed_npcs', []))
     locations = "\n".join(context.get('detailed_locations', []))
     previous_scenes = "\n".join(context.get('detailed_scenes', []))
@@ -326,11 +326,11 @@ def agent_5_detail_scene(llm, language, context):
         "language": language
     })
 
-def agent_6_coherence_report(llm, language, context):
+def agent_6_coherence_report(llm, language, scenario_details, context):
     """
     Agent 6: Analyzes the full draft and creates a coherence report.
     """
-    synopsis = context.get('synopsis', '')
+    synopsis = scenario_details
     npcs = "\n".join(context.get('detailed_npcs', []))
     locations = "\n".join(context.get('detailed_locations', []))
     scenes = "\n".join(context.get('detailed_scenes', []))
@@ -338,11 +338,11 @@ def agent_6_coherence_report(llm, language, context):
         "synopsis": synopsis, "npcs": npcs, "locations": locations, "scenes": scenes, "language": language
     })
 
-def agent_7_revise_scenes(llm, language, context):
+def agent_7_revise_scenes(llm, language, scenario_details, context):
     """
     Agent 7: Revises the scenes based on the coherence report.
     """
-    synopsis = context.get('synopsis', '')
+    synopsis = scenario_details
     npcs = "\n".join(context.get('detailed_npcs', []))
     locations = "\n".join(context.get('detailed_locations', []))
     scenes = "\n".join(context.get('detailed_scenes', []))
