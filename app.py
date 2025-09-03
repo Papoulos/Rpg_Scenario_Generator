@@ -21,8 +21,7 @@ def index():
 @app.route('/generate', methods=['POST'])
 def generate():
     """
-    Handles step-by-step scenario generation.
-    Receives the current step and context, and calls the appropriate generator function.
+    Handles step-by-step scenario generation based on the new agent architecture.
     """
     data = request.get_json()
     if not data:
@@ -31,20 +30,22 @@ def generate():
     step = data.get('step')
     model_name = data.get('model_name')
     language = data.get('language')
-    scenario_details = data.get('details')
+    details = data.get('details')
     context = data.get('context', {})
 
-    if not all([step, model_name, language, scenario_details]):
+    if not all([step, model_name, language, details]):
         return Response("Error: Missing required parameters in JSON payload.", status=400)
 
-    # --- Map step name to generator function ---
+    # --- Map step name to agent function ---
     step_functions = {
-        'synopsis': generator.generate_synopsis_step,
-        'scenario': generator.generate_scenario_step,
-        'npcs': generator.generate_npcs_step,
-        'locations': generator.generate_locations_step,
-        'scenes': generator.generate_scenes_step,
-        'title': generator.generate_title_step,
+        'agent_0_synopsis': generator.agent_0_generate_synopsis,
+        'agent_1_list_items': generator.agent_1_list_items,
+        'agent_2_detail_npc': generator.agent_2_detail_npc,
+        'agent_3_detail_location': generator.agent_3_detail_location,
+        'agent_4_outline_scenes': generator.agent_4_outline_scenes,
+        'agent_5_detail_scene': generator.agent_5_detail_scene,
+        'agent_6_coherence_report': generator.agent_6_coherence_report,
+        'agent_7_revise_scenes': generator.agent_7_revise_scenes,
     }
 
     if step not in step_functions:
@@ -54,11 +55,11 @@ def generate():
         llm = get_llm_instance(model_name)
         generation_function = step_functions[step]
 
-        # Call the appropriate function which now returns a string
+        # Call the appropriate function with its required arguments
         response_text = generation_function(
             llm=llm,
             language=language,
-            scenario_details=scenario_details,
+            scenario_details=details,
             context=context
         )
 
@@ -91,66 +92,80 @@ def download_pdf():
     # --- 1. Convert Markdown to initial HTML ---
     html_content = markdown2.markdown(markdown_content, extras=["fenced-code-blocks", "tables", "header-ids"])
 
-    # --- 2. Process HTML with BeautifulSoup to build TOC ---
+    # --- 2. Process HTML with BeautifulSoup to build TOC and structure content ---
     soup = BeautifulSoup(html_content, 'html.parser')
 
-    toc_list = []
-    headings = soup.find_all(['h2', 'h3'])
-
-    for heading in headings:
-        heading_id = slugify(heading.get_text())
-        heading['id'] = heading_id
-
-        # Create TOC entry
-        level = int(heading.name[1])  # h2 -> 2, h3 -> 3
-        toc_list.append({
-            "level": level,
-            "text": heading.get_text(),
-            "id": heading_id
-        })
-
-    # Build TOC HTML
-    toc_html = '<nav id="toc"><h2>Table of Contents</h2><ul>'
-    for item in toc_list:
-        if item['level'] == 2:
-            toc_html += f'<li><a href="#{item["id"]}">{item["text"]}</a></li>'
-        elif item['level'] == 3:
-            toc_html += f'<li style="margin-left: 2em;"><a href="#{item["id"]}">{item["text"]}</a></li>'
-    toc_html += '</ul></nav>'
-
-    # --- 3. Construct final HTML for PDF ---
+    # Extract title and synopsis for the cover page
     title_tag = soup.find('h1')
     title_text = title_tag.get_text() if title_tag else 'Scenario'
     if title_tag:
-        title_tag.decompose() # Remove the title from the main content
-    final_html_content = str(soup)
+        title_tag.decompose() # Remove title from main content
 
+    synopsis_tag = soup.find('h2', string='Synopsis')
+    synopsis_html = ''
+    if synopsis_tag:
+        # Capture the synopsis content until the next h2
+        content_after_synopsis = []
+        for sibling in synopsis_tag.find_next_siblings():
+            if sibling.name == 'h2':
+                break
+            content_after_synopsis.append(str(sibling))
+        synopsis_html = ''.join(content_after_synopsis)
+        synopsis_tag.decompose() # Remove synopsis from main content for now
+
+    # Add page-break class to all top-level sections
+    for h2 in soup.find_all('h2'):
+        h2['class'] = 'new-page'
+
+    # --- 3. Build TOC ---
+    toc_list = []
+    headings = soup.find_all(['h2', 'h3'])
+    for heading in headings:
+        heading_id = slugify(heading.get_text())
+        heading['id'] = heading_id
+        level = int(heading.name[1])
+        toc_list.append({"level": level, "text": heading.get_text(), "id": heading_id})
+
+    toc_html = '<nav id="toc"><h2>Table des Matières</h2><ul>'
+    for item in toc_list:
+        style = 'margin-left: 2em;' if item['level'] == 3 else ''
+        toc_html += f'<li style="{style}"><a href="#{item["id"]}">{item["text"]}</a></li>'
+    toc_html += '</ul></nav>'
+
+    # --- 4. Construct final HTML for PDF ---
+    final_html_content = str(soup)
     html_for_pdf = f"""
     <html>
         <head>
             <style>
                 @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Roboto:wght@400;700&display=swap');
+                body {{ font-family: 'Merriweather', serif; line-height: 1.6; color: #333; }}
+                h1, h2, h3, h4, h5, h6 {{ font-family: 'Roboto', sans-serif; font-weight: 700; }}
 
-                body {{
-                    font-family: 'Merriweather', serif;
-                    line-height: 1.6;
-                    color: #333;
-                }}
-                h1, h2, h3, h4, h5, h6 {{
-                    font-family: 'Roboto', sans-serif;
-                    font-weight: 700;
-                }}
-                h1 {{
-                    font-size: 40pt;
-                    text-align: center;
-                    margin-top: 40vh; /* Vertical centering for the cover */
-                }}
-                h2 {{
-                    page-break-before: always;
-                    border-bottom: 2px solid #cccccc;
-                    padding-bottom: 10px;
-                    font-size: 24pt;
-                }}
+                /* Cover Page Styles */
+                .cover-title {{ font-size: 40pt; text-align: center; margin-top: 35vh; }}
+                .cover-synopsis {{ font-size: 12pt; text-align: center; margin-top: 2em; font-style: italic; }}
+
+                /* General Heading Styles */
+                h2 {{ border-bottom: 2px solid #cccccc; padding-bottom: 10px; font-size: 24pt; }}
+                h3 {{ font-size: 18pt; border-bottom: 1px solid #eeeeee; padding-bottom: 5px; }}
+
+                pre {{ background-color: #f5f5f5; padding: 1em; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; font-family: 'Courier New', Courier, monospace; }}
+                code {{ font-family: 'Courier New', Courier, monospace; }}
+                table {{ border-collapse: collapse; width: 100%; margin-top: 1em;}}
+                th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
+                th {{ background-color: #f2f2f2; }}
+
+                /* Page layout */
+                @page {{ size: A4; margin: 2cm; }}
+                @page:first {{ margin: 0; }}
+
+                /* Force page breaks for sections */
+                .new-page {{ page-break-before: always; }}
+
+                /* Table of Contents Styling */
+                #toc {{ page-break-after: always; }}
+                #toc h2 {{ page-break-before: never; text-align: center; border-bottom: 2px solid #cccccc; }}
                 h3 {{
                     font-size: 18pt;
                     border-bottom: 1px solid #eeeeee;

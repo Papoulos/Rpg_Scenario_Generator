@@ -19,7 +19,6 @@
         }
         .result-display {
             flex: 1;
-            /* Make the result area scrollable if content overflows */
             max-height: 90vh;
             overflow-y: auto;
             padding: 1em;
@@ -34,7 +33,6 @@
         button { display: block; width: 100%; padding: 1em; margin-top: 2em; background-color: #007BFF; color: white; border: none; border-radius: 4px; font-size: 1.2em; cursor: pointer; }
         button:hover { background-color: #0056b3; }
         button:disabled { background-color: #cccccc; cursor: not-allowed; }
-        /* Adjusted result container to remove margin, as the parent handles spacing */
         #result-container { padding: 1em; border: 1px solid #ddd; border-radius: 4px; background: #fafafa; }
         #result-html { min-height: 100px; }
         #spinner { display: none; margin: 2em auto; width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite; }
@@ -115,41 +113,66 @@
         const markdownContentInput = document.getElementById('markdown_content');
         const submitButton = form.querySelector('button[type="submit"]');
 
-        // --- State Management ---
-        const generationSequence = ['synopsis', 'scenario', 'npcs', 'locations', 'scenes', 'title'];
-        const buttonLabels = {
-            'synopsis': 'Générer le Synopsis',
-            'scenario': 'Détailler le Scénario',
-            'npcs': 'Créer les PNJ',
-            'locations': 'Décrire les Lieux',
-            'scenes': 'Développer les Scènes',
-            'title': 'Générer le Titre'
+        // --- State Management for the new Agent Architecture ---
+        let generationState = {
+            phase: 'start', // start, synopsis, list_items, detail_npcs, detail_locations, outline_scenes, detail_scenes, coherence_check, revise_scenes, done
+            initialDetails: {},
+            context: {
+                synopsis: '',
+                npc_list: [],
+                location_list: [],
+                scene_list: [],
+                detailed_npcs: [],
+                detailed_locations: [],
+                detailed_scenes: [],
+                coherence_report: '',
+            },
+            loopIndex: 0,
+            isGenerating: false,
         };
-        let currentStepIndex = 0;
-        let generatedContent = {}; // Stores the complete text of each generated step
-        let initialFormDetails = {};
-        let isGenerating = false;
 
         // --- Main Handler ---
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
-            if (isGenerating) return;
+            if (generationState.isGenerating) return;
 
-            isGenerating = true;
+            generationState.isGenerating = true;
             submitButton.disabled = true;
             spinner.style.display = 'block';
 
-            // --- On first click, capture form data and disable form ---
-            if (currentStepIndex === 0) {
+            if (generationState.phase === 'start') {
                 resultContainer.style.display = 'block';
                 const formData = new FormData(form);
-                initialFormDetails = Object.fromEntries(formData.entries());
-                // Disable form fields
-                Array.from(form.elements).forEach(el => el.disabled = true);
-                submitButton.disabled = false; // Re-enable the submit button itself
+                generationState.initialDetails = Object.fromEntries(formData.entries());
+                Array.from(form.elements).forEach(el => {
+                    if(el.tagName !== 'BUTTON') el.disabled = true;
+                });
+                generationState.phase = 'synopsis';
             }
 
-            const stepName = generationSequence[currentStepIndex];
+            let stepName = '';
+            let requestContext = { ...generationState.context };
+
+            // Determine which agent to call based on the current phase
+            switch (generationState.phase) {
+                case 'synopsis': stepName = 'agent_0_synopsis'; break;
+                case 'list_items': stepName = 'agent_1_list_items'; break;
+                case 'detail_npcs':
+                    stepName = 'agent_2_detail_npc';
+                    requestContext.item_name = generationState.context.npc_list[generationState.loopIndex];
+                    break;
+                case 'detail_locations':
+                    stepName = 'agent_3_detail_location';
+                    requestContext.item_name = generationState.context.location_list[generationState.loopIndex];
+                    break;
+                case 'outline_scenes': stepName = 'agent_4_outline_scenes'; break;
+                case 'detail_scenes':
+                    stepName = 'agent_5_detail_scene';
+                    requestContext.item_name = generationState.context.scene_list[generationState.loopIndex];
+                    break;
+                case 'coherence_check': stepName = 'agent_6_coherence_report'; break;
+                case 'revise_scenes': stepName = 'agent_7_revise_scenes'; break;
+            }
 
             try {
                 const response = await fetch('/generate', {
@@ -157,72 +180,116 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         step: stepName,
-                        model_name: initialFormDetails.llm_model,
-                        language: initialFormDetails.language,
-                        details: initialFormDetails,
-                        context: generatedContent // Send context from previous steps
+                        model_name: generationState.initialDetails.llm_model,
+                        language: generationState.initialDetails.language,
+                        details: generationState.initialDetails,
+                        context: requestContext
                     }),
                 });
 
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    throw new Error(`Server error: ${response.status}. ${errorText}`);
-                }
+                if (!response.ok) { throw new Error(`Server error: ${response.status}. ${await response.text()}`); }
 
-                // Since the backend is non-streaming, await the full text response.
                 const responseText = await response.text();
-                let currentStepText = responseText;
-
-                // Handle the special title marker at the end of the final step
-                if (currentStepText.includes('STREAM_ENDED_FINAL_TITLE:')) {
-                    const parts = currentStepText.split('STREAM_ENDED_FINAL_TITLE:');
-                    currentStepText = parts[0]; // The actual content of the title step
-                    const finalTitle = parts[1].trim();
-
-                    // Update the H1 placeholder in the full displayed content
-                    // We need to re-render to make sure the H1 tag is there
-                    const finalContentWithTitlePlaceholder = Object.values(generatedContent).join('\n\n') + currentStepText;
-                    resultHtml.innerHTML = marked.parse(finalContentWithTitlePlaceholder);
-                    const h1 = resultHtml.querySelector('h1');
-                    if (h1) {
-                        h1.textContent = finalTitle;
-                    }
-                } else {
-                     // Update the view with all previous content plus the current response
-                    const fullContent = Object.values(generatedContent).join('\n\n') + currentStepText;
-                    resultHtml.innerHTML = marked.parse(fullContent);
-                }
-
-                // Store the complete text for the current step
-                generatedContent[stepName] = currentStepText;
-                resultContainer.scrollTop = resultContainer.scrollHeight;
-
-                // --- Prepare for next step or finish ---
-                currentStepIndex++;
-                if (currentStepIndex < generationSequence.length) {
-                    const nextStepName = generationSequence[currentStepIndex];
-                    submitButton.textContent = buttonLabels[nextStepName] || 'Suivant';
-                } else {
-                    submitButton.textContent = 'Génération Terminée';
-                    submitButton.disabled = true;
-                    // Prepare and show PDF download form
-                    markdownContentInput.value = Object.values(generatedContent).join('\n\n');
-                    pdfForm.style.display = 'block';
-                }
+                await processResponse(responseText);
+                updateDisplay();
+                updateButton();
 
             } catch (error) {
                 resultHtml.innerHTML += `<p style="color: red;"><strong>Error:</strong> ${error.message}</p>`;
                 console.error('Generation failed:', error);
                 submitButton.textContent = 'Erreur';
-                // Don't disable permanently on error, allow retry
             } finally {
-                isGenerating = false;
+                generationState.isGenerating = false;
                 spinner.style.display = 'none';
-                if (currentStepIndex < generationSequence.length) {
+                if (generationState.phase !== 'done') {
                     submitButton.disabled = false;
                 }
             }
         });
+
+        async function processResponse(responseText) {
+            const phase = generationState.phase;
+            if (phase === 'synopsis') {
+                generationState.context.synopsis = responseText;
+                generationState.phase = 'list_items';
+            } else if (phase === 'list_items') {
+                const items = JSON.parse(responseText);
+                generationState.context.npc_list = items.npcs || [];
+                generationState.context.location_list = items.locations || [];
+                generationState.phase = generationState.context.npc_list.length > 0 ? 'detail_npcs' : 'detail_locations';
+            } else if (phase === 'detail_npcs') {
+                generationState.context.detailed_npcs.push(responseText);
+                generationState.loopIndex++;
+                if (generationState.loopIndex >= generationState.context.npc_list.length) {
+                    generationState.phase = generationState.context.location_list.length > 0 ? 'detail_locations' : 'outline_scenes';
+                    generationState.loopIndex = 0;
+                }
+            } else if (phase === 'detail_locations') {
+                generationState.context.detailed_locations.push(responseText);
+                generationState.loopIndex++;
+                if (generationState.loopIndex >= generationState.context.location_list.length) {
+                    generationState.phase = 'outline_scenes';
+                    generationState.loopIndex = 0;
+                }
+            } else if (phase === 'outline_scenes') {
+                const items = JSON.parse(responseText);
+                generationState.context.scene_list = items.scenes || [];
+                generationState.phase = generationState.context.scene_list.length > 0 ? 'detail_scenes' : 'coherence_check';
+            } else if (phase === 'detail_scenes') {
+                generationState.context.detailed_scenes.push(responseText);
+                generationState.loopIndex++;
+                if (generationState.loopIndex >= generationState.context.scene_list.length) {
+                    generationState.phase = 'coherence_check';
+                    generationState.loopIndex = 0;
+                }
+            } else if (phase === 'coherence_check') {
+                generationState.context.coherence_report = responseText;
+                generationState.phase = 'revise_scenes';
+            } else if (phase === 'revise_scenes') {
+                generationState.context.detailed_scenes = [responseText];
+                generationState.phase = 'done';
+            }
+        }
+
+        function updateDisplay() {
+            let fullHtml = '';
+            const context = generationState.context;
+            if (context.synopsis) fullHtml += marked.parse(context.synopsis);
+            if (context.detailed_npcs.length > 0) fullHtml += '<h2>Personnages</h2>' + marked.parse(context.detailed_npcs.join('\n\n'));
+            if (context.detailed_locations.length > 0) fullHtml += '<h2>Lieux</h2>' + marked.parse(context.detailed_locations.join('\n\n'));
+            if (context.detailed_scenes.length > 0) fullHtml += '<h2>Scènes</h2>' + marked.parse(context.detailed_scenes.join('\n\n'));
+            if (context.coherence_report) fullHtml += '<h2>Rapport de Cohérence</h2>' + marked.parse(context.coherence_report);
+            resultHtml.innerHTML = fullHtml;
+            resultContainer.scrollTop = resultContainer.scrollHeight;
+        }
+
+        function updateButton() {
+            const phase = generationState.phase;
+            const context = generationState.context;
+            let text = 'Suivant';
+
+            if (phase === 'list_items') text = 'Lister les PNJ & Lieux';
+            else if (phase === 'detail_npcs') {
+                const total = context.npc_list.length;
+                text = `Détailler PNJ (${generationState.loopIndex + 1}/${total})`;
+            } else if (phase === 'detail_locations') {
+                const total = context.location_list.length;
+                text = `Détailler Lieu (${generationState.loopIndex + 1}/${total})`;
+            } else if (phase === 'outline_scenes') text = 'Structurer les Scènes';
+            else if (phase === 'detail_scenes') {
+                const total = context.scene_list.length;
+                text = `Détailler Scène (${generationState.loopIndex + 1}/${total})`;
+            } else if (phase === 'coherence_check') text = 'Vérifier la Cohérence';
+            else if (phase === 'revise_scenes') text = 'Appliquer les Corrections';
+            else if (phase === 'done') {
+                text = 'Génération Terminée';
+                submitButton.disabled = true;
+                const fullMarkdown = `${context.synopsis}\n\n## Personnages\n${context.detailed_npcs.join('\n\n')}\n\n## Lieux\n${context.detailed_locations.join('\n\n')}\n\n## Scènes\n${context.detailed_scenes.join('\n\n')}`;
+                markdownContentInput.value = fullMarkdown;
+                pdfForm.style.display = 'block';
+            }
+            submitButton.textContent = text;
+        }
     </script>
 </body>
 </html>
