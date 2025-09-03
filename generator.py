@@ -57,12 +57,10 @@ prompt_agent_1 = ChatPromptTemplate.from_template(
     You MUST output a single JSON object, and nothing else. The JSON object should have two keys: "npcs" and "locations", where each key holds a list of strings (the names).
 
     Example:
-    ```json
     {{
         "npcs": ["Aldric the Blacksmith", "Seraphina the informant", "The Night-watch Captain"],
         "locations": ["The Rusty Flagon tavern", "The old sewer system", "Lord Valerius's Manor"]
     }}
-    ```
 
     The final output must be in {language}, but the JSON keys ("npcs", "locations") must remain in English.
     """
@@ -166,7 +164,6 @@ prompt_agent_4 = ChatPromptTemplate.from_template(
     You MUST output a single JSON object, and nothing else. The JSON object should have a single key, "scenes", which holds a list of short, descriptive scene titles.
 
     Example:
-    ```json
     {{
         "scenes": [
             "An Urgent Message at the Tavern",
@@ -176,7 +173,6 @@ prompt_agent_4 = ChatPromptTemplate.from_template(
             "Final Standoff at the Clocktower"
         ]
     }}
-    ```
     The final output must be in {language}, but the JSON key ("scenes") must remain in English.
     """
 )
