@@ -175,6 +175,10 @@
             }
 
             try {
+                const detailsPayload = generationState.phase === 'synopsis'
+                    ? generationState.initialDetails
+                    : generationState.context.synopsis;
+
                 const response = await fetch('/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -182,7 +186,7 @@
                         step: stepName,
                         model_name: generationState.initialDetails.llm_model,
                         language: generationState.initialDetails.language,
-                        details: generationState.initialDetails,
+                        details: detailsPayload,
                         context: requestContext
                     }),
                 });
