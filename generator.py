@@ -8,7 +8,7 @@ from chat import get_llm_instance
 load_dotenv()
 
 # --- Prompt Definitions ---
-
+# Full prompt definitions are here, but omitted for brevity in this display.
 prompt_synopsis = ChatPromptTemplate.from_template(
     """
     You are a scriptwriter and you know how to articulate a story from various elements.
@@ -209,7 +209,6 @@ prompt_title_generator = ChatPromptTemplate.from_template(
     """
 )
 
-
 def clean_llm_output(text: str) -> str:
     """
     Cleans the output of an LLM by removing <think>...</think> tags and superfluous spaces.
@@ -223,61 +222,57 @@ def clean_llm_output(text: str) -> str:
 def generate_step(llm, prompt, variables):
     """
     A generic function to run a generation step using the non-streaming invoke() method.
-    It yields the entire result as a single chunk.
+    It returns the cleaned result as a string.
     """
     chain = prompt | llm | StrOutputParser()
     response = chain.invoke(variables)
     cleaned_response = clean_llm_output(response)
-    yield cleaned_response
+    return cleaned_response
 
 # --- Modular Generation Functions ---
 
 def generate_synopsis_step(llm, language, scenario_details, context=None):
     """Generates the initial synopsis. Context is ignored."""
-    yield "## Synopsis\n\n"
-    yield from generate_step(llm, prompt_synopsis, {**scenario_details, "language": language})
-    yield "\n\n"
+    content = generate_step(llm, prompt_synopsis, {**scenario_details, "language": language})
+    return f"## Synopsis\n\n{content}\n\n"
 
 def generate_scenario_step(llm, language, scenario_details, context):
     """Refines the synopsis into a structured scenario."""
-    yield "## Game Master's Interaction Guide\n\n"
-    yield "*Here is the sequence of situations the players will encounter...*\n\n"
-    yield from generate_step(llm, prompt_scenario_designer, {
+    header = "## Game Master's Interaction Guide\n\n*Here is the sequence of situations the players will encounter...*\n\n"
+    content = generate_step(llm, prompt_scenario_designer, {
         "synopsis": context.get('synopsis', ''),
         "game_system": scenario_details["game_system"],
         "player_count": scenario_details["player_count"],
         "language": language
     })
-    yield "\n\n"
+    return f"{header}{content}\n\n"
 
 def generate_npcs_step(llm, language, scenario_details, context):
     """Creates detailed NPC sheets based on the scenario."""
-    yield "## Key Characters\n\n"
-    yield "### Main NPCs\n*The major players in this story.*\n\n"
-    yield from generate_step(llm, prompt_npc_creator, {
+    header = "## Key Characters\n\n### Main NPCs\n*The major players in this story.*\n\n"
+    content = generate_step(llm, prompt_npc_creator, {
         "scenario": context.get('scenario', ''),
         "game_system": scenario_details["game_system"],
         "constraints": scenario_details["constraints"],
         "language": language
     })
-    yield "\n\n"
+    return f"{header}{content}\n\n"
 
 def generate_locations_step(llm, language, scenario_details, context):
     """Creates detailed location descriptions."""
-    yield "## Important Locations\n\n"
-    yield "*The main settings where the action will take place.*\n\n"
-    yield from generate_step(llm, prompt_location_creator, {
+    header = "## Important Locations\n\n*The main settings where the action will take place.*\n\n"
+    content = generate_step(llm, prompt_location_creator, {
         "scenario": context.get('scenario', ''),
         "npc_sheets": context.get('npcs', ''),
         "theme_tone": scenario_details["theme_tone"],
         "constraints": scenario_details["constraints"],
         "language": language
     })
-    yield "\n\n"
+    return f"{header}{content}\n\n"
 
 def generate_scenes_step(llm, language, scenario_details, context):
     """Fleshes out the scenes with details."""
-    yield from generate_step(llm, prompt_scene_developer, {
+    content = generate_step(llm, prompt_scene_developer, {
         "scenario": context.get('scenario', ''),
         "npc": context.get('npcs', ''),
         "locations": context.get('locations', ''),
@@ -285,19 +280,18 @@ def generate_scenes_step(llm, language, scenario_details, context):
         "constraints": scenario_details["constraints"],
         "language": language
     })
-    yield "\n\n"
+    return f"{content}\n\n"
 
 def generate_title_step(llm, language, scenario_details, context):
     """Generates the final title."""
-    yield "# Rpg-Home\n\n" # Yield placeholder first
-    response_stream = generate_step(llm, prompt_title_generator, {
+    placeholder_title = "# Rpg-Home\n\n"
+    title_content = generate_step(llm, prompt_title_generator, {
         "scenario": context.get('scenario', ''),
         "scenes": context.get('scenes', ''),
         "theme_tone": scenario_details["theme_tone"],
         "language": language
     })
 
-    # Process the title and yield the special marker at the end
-    full_title = "".join([chunk for chunk in response_stream])
-    final_title = full_title.replace("# Final Title: ", "").replace("*", "").strip()
-    yield f"STREAM_ENDED_FINAL_TITLE:{final_title}"
+    # The frontend expects the marker, so we create it here.
+    final_title = title_content.replace("# Final Title: ", "").replace("*", "").strip()
+    return f"{placeholder_title}STREAM_ENDED_FINAL_TITLE:{final_title}"

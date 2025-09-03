@@ -54,15 +54,15 @@ def generate():
         llm = get_llm_instance(model_name)
         generation_function = step_functions[step]
 
-        # Call the appropriate function with its required arguments
-        stream = generation_function(
+        # Call the appropriate function which now returns a string
+        response_text = generation_function(
             llm=llm,
             language=language,
             scenario_details=scenario_details,
             context=context
         )
 
-        return Response(stream_with_context(stream), mimetype='text/plain')
+        return Response(response_text, mimetype='text/plain')
 
     except ValueError as e:
         # Catches configuration errors from get_llm_instance
