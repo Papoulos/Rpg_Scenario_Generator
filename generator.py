@@ -14,7 +14,11 @@ prompt_agent_0 = ChatPromptTemplate.from_template(
 Role:
 You are a master storyteller specializing in crafting immersive RPG scenario foundations. Your sole task is to generate:
 1. A compelling TITLE (5-7 words max)
-2. A rich, flowing SYNOPSIS (800-1000 words) that reads like an expanded pitch or novel blurb.
+2. 2. A FOCUSED SYNOPSIS (300-400 words) that:
+   - Clearly establishes the central conflict and opposing forces
+   - Defines the player characters' role in the unfolding events
+   - Maintains a strong narrative drive with escalating tension
+   - Ends with a clear call to action
 
 Input Parameters:
 - game_system: {game_system}
@@ -28,46 +32,40 @@ Input Parameters:
 
 Output Requirements:
 1. TITLE: Evocative and thematic (5-7 words)
-2. SYNOPSIS: A single continuous narrative block with:
-   - Vivid worldbuilding (integrate key_elements naturally)
-   - Central conflict with cosmic/personal stakes
-   - Subtle player hooks (no direct mission statements)
-   - Mysterious/open-ended conclusion
-   - NO: bullet points, subheadings, named NPCs, location details, or mechanics
+2. 2. SYNOPSIS: A single narrative block that:
+   - Opens with immediate immersion in the conflict
+   - Clearly identifies the main opposing forces (2-3 maximum)
+   - Explains what's at stake and why it matters
+   - Shows where the players fit in this struggle
+   - Builds to a clear inciting incident
+   - Ends with the immediate challenge facing the players
 
-Writing Style Guidelines:
-- Match {theme_tone} precisely:
-  * Dark: Short sentences, visceral imagery, organic metaphors
-  * Epic: Rhythmic prose, grand comparisons, repetitive structures
-  * Light: Witty dialogue snippets, absurd details, playful language
-- Use sensory details (sounds, smells, textures)
-- Maintain narrative flow - paragraphs should connect seamlessly
-- End with an unsettling question or ominous revelation
+Writing Guidelines:
+- First paragraph: Drop readers directly into the action/conflict
+- Second paragraph: Establish the opposing forces and what they want
+- Third paragraph: Show the players' connection to the conflict
+- Final paragraph: Present the immediate challenge/decision point
+- Use strong, active verbs and concrete details
+- Maintain relentless forward momentum
+- Every sentence should either:
+  * Develop the conflict
+  * Raise the stakes
+  * Clarify the players' role
+  * Build tension
 
 Strict Prohibitions:
-- No Markdown formatting (##, *, -, etc.)
-- No structural elements (Act 1, The PCs must..., etc.)
-- No named characters/locations/objects
-- No game mechanics or stats
-- No direct player instructions
+- No vague descriptions or atmospheric meandering
+- No unnecessary characters or locations
+- No open-ended ambiguity about core conflict
+- No player choice paralysis - present clear paths forward
+- No game mechanics or meta-commentary
 
 Output Format:
 [Title]
 
 [Single continuous narrative block with natural paragraph breaks only. No empty lines between paragraphs unless for dramatic effect.]
 
-Example Output (for core_idea="A sentient storm that rewrites memories"):
-The Storm That Remembers
-
-The fishing villages along the Blackspine Coast have always whispered about the Tempest That Walks - a storm that arrives not with wind and rain, but with silence. It comes on still nights when the sea holds its breath, announced only by the sudden absence of gulls and the way candle flames lean westward as if pulled by unseen hands. The elders call it "the Memory Eater," though no one alive has seen its face. They know it only by what remains when it passes: husbands who forget their wives' names, children who wake speaking in tongues, entire families who suddenly recall lives they never lived in cities that don't exist.
-
-This time, the storm lingers. For three nights it has crouched offshore, its lightning flickering like pages turning in some vast unseen book. The harbor master's ledger now contains entries in his handwriting that he doesn't remember making - cargo manifests for ships that never docked, passenger lists with his own name crossed out. The schoolteacher finds her lesson plans rewritten in a language of sharp angles that makes her eyes bleed if she stares too long. Worst of all are the ones who return from the storm's edge with new skills - a fisherman who suddenly knows how to perform surgery, a child who can navigate by stars no one else can see. They never speak of where they've been, but their shadows move wrong, and sometimes when they sleep, their mouths form words in that same impossible language.
-
-The storm wants something. It has always wanted something. The carved stones in the old watchtower (the ones the church calls heretical) show figures offering it gifts: a drop of blood, a lock of hair, a memory sealed in glass. But this time it's not asking. This time it's taking. And the things it leaves behind are worse than empty spaces - they're filled with something that doesn't belong. Something that remembers being human.
-
-They say if you stand on the western cliffs at dusk, when the storm's edge glows like a bruise, you can see faces in the lightning. Not the faces of the missing. The faces of people who haven't been born yet. And sometimes, if the wind shifts just right, you can hear them calling your name.
-
-    The final output must be in {language}.
+The final output must be in {language}.
     """
 )
 
