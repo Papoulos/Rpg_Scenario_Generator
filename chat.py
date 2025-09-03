@@ -70,6 +70,7 @@ def get_llm_instance(model_name: str):
             api_key=final_api_key,
             default_headers=extra_headers,
             timeout=timeout,
+            max_retries=0, # Disable automatic retries on timeout
         ).chat.completions
 
         return ChatOpenAI(
