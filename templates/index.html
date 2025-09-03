@@ -169,36 +169,33 @@
                     throw new Error(`Server error: ${response.status}. ${errorText}`);
                 }
 
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                let currentStepText = '';
+                // Since the backend is non-streaming, await the full text response.
+                const responseText = await response.text();
+                let currentStepText = responseText;
 
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
+                // Handle the special title marker at the end of the final step
+                if (currentStepText.includes('STREAM_ENDED_FINAL_TITLE:')) {
+                    const parts = currentStepText.split('STREAM_ENDED_FINAL_TITLE:');
+                    currentStepText = parts[0]; // The actual content of the title step
+                    const finalTitle = parts[1].trim();
 
-                    const chunk = decoder.decode(value, { stream: true });
-
-                    // Handle the special title marker at the end of the final step
-                    if (chunk.includes('STREAM_ENDED_FINAL_TITLE:')) {
-                        const parts = chunk.split('STREAM_ENDED_FINAL_TITLE:');
-                        currentStepText += parts[0];
-                        resultHtml.innerHTML = marked.parse(Object.values(generatedContent).join('\n\n') + currentStepText);
-                        const finalTitle = parts[1].trim();
-                        // Update the H1 placeholder in the displayed content
-                        const h1 = resultHtml.querySelector('h1');
-                        if (h1) h1.textContent = finalTitle;
-                        break;
-                    } else {
-                        currentStepText += chunk;
-                        // Update the view with all previous content plus the current stream
-                        resultHtml.innerHTML = marked.parse(Object.values(generatedContent).join('\n\n') + currentStepText);
+                    // Update the H1 placeholder in the full displayed content
+                    // We need to re-render to make sure the H1 tag is there
+                    const finalContentWithTitlePlaceholder = Object.values(generatedContent).join('\n\n') + currentStepText;
+                    resultHtml.innerHTML = marked.parse(finalContentWithTitlePlaceholder);
+                    const h1 = resultHtml.querySelector('h1');
+                    if (h1) {
+                        h1.textContent = finalTitle;
                     }
-                    resultContainer.scrollTop = resultContainer.scrollHeight;
+                } else {
+                     // Update the view with all previous content plus the current response
+                    const fullContent = Object.values(generatedContent).join('\n\n') + currentStepText;
+                    resultHtml.innerHTML = marked.parse(fullContent);
                 }
 
                 // Store the complete text for the current step
                 generatedContent[stepName] = currentStepText;
+                resultContainer.scrollTop = resultContainer.scrollHeight;
 
                 // --- Prepare for next step or finish ---
                 currentStepIndex++;
