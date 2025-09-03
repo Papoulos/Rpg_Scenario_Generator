@@ -10,3 +10,4 @@ beautifulsoup4
 langchain-openai
 langchain-mistralai
 requests
+json5

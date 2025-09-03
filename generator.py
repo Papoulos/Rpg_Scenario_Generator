@@ -109,16 +109,16 @@ Output Requirements:
 
 Example Outputs:
 Valid:
-{
+{{
     "npcs": ["The Stormcaller", "Old Man Harkin", "The Faceless Choir"],
     "locations": ["The Weeping Spire", "Harkin's Boat", "The Bone Marshes"]
-}
+}}
 
 Empty case:
-{
+{{
     "npcs": [],
     "locations": ["The Abandoned Lighthouse"]
-}
+}}
 
 Strict Prohibitions:
 - NO descriptions or attributes
