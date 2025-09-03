@@ -222,13 +222,13 @@ def clean_llm_output(text: str) -> str:
 
 def generate_step(llm, prompt, variables):
     """
-    A generic function to run a generation step and stream the output.
+    A generic function to run a generation step using the non-streaming invoke() method.
+    It yields the entire result as a single chunk.
     """
     chain = prompt | llm | StrOutputParser()
-    response_stream = chain.stream(variables)
-    for chunk in response_stream:
-        cleaned_chunk = clean_llm_output(chunk)
-        yield cleaned_chunk
+    response = chain.invoke(variables)
+    cleaned_response = clean_llm_output(response)
+    yield cleaned_response
 
 # --- Modular Generation Functions ---
 

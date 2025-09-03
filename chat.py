@@ -60,18 +60,11 @@ def get_llm_instance(model_name: str):
         timeout = 60
 
     if service == "google":
-        return ChatGoogleGenerativeAI(
-            model=config_model_name,
-            google_api_key=api_key,
-            client_options={"timeout": timeout},
-            stream=True
-        )
+        return ChatGoogleGenerativeAI(model=config_model_name, google_api_key=api_key, client_options={"timeout": timeout})
 
     elif service in ["openai", "openai_compatible"]:
         endpoint = provider_config.get("endpoint")
 
-        # The http_client setup for ChatOpenAI does not need to change for streaming.
-        # The `streaming=True` flag is passed to the ChatOpenAI constructor.
         http_client = OpenAI(
             base_url=endpoint,
             api_key=final_api_key,
@@ -81,17 +74,11 @@ def get_llm_instance(model_name: str):
 
         return ChatOpenAI(
             model=config_model_name,
-            client=http_client,
-            streaming=True
+            client=http_client
         )
 
     elif service == "mistral":
-        return ChatMistralAI(
-            model=config_model_name,
-            api_key=api_key,
-            timeout=timeout,
-            streaming=True
-        )
+        return ChatMistralAI(model=config_model_name, api_key=api_key, timeout=timeout)
 
     else:
         raise ValueError(f"Unsupported LLM service: {service}")
