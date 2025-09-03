@@ -1,4 +1,5 @@
 import re
+import json
 from dotenv import load_dotenv
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
@@ -7,207 +8,66 @@ from chat import get_llm_instance
 # --- Load Environment Variables ---
 load_dotenv()
 
-# --- Prompt Definitions ---
-# Full prompt definitions are here, but omitted for brevity in this display.
-prompt_synopsis = ChatPromptTemplate.from_template(
+# --- AGENT 0: SYNOPSIS AND TITLE ---
+prompt_agent_0 = ChatPromptTemplate.from_template(
     """
-    You are a scriptwriter and you know how to articulate a story from various elements.
-
-    Drawing inspiration from these elements:
-    - **Game System**: {game_system}
-    - **Number of players**: {player_count}
-    - **Theme and tone**: {theme_tone}
-    - **Starting idea**: {core_idea}
-    - **Constraints**: {constraints}
-    - **Important elements**: {key_elements}
-    - **Elements to avoid**: {elements_to_avoid}
-
-    Write a draft RPG scenario for a one-shot that can be played in a 4-hour session.
-    The scenario should remain simple but focus on the main theme of the story.
-    The draft must contain these elements:
-     - The synopsis of the story
-     - The rough stages of the adventure linked by narrative elements
-       - If the scenario is linear, it will be a succession of stages
-       - If it is a more open scenario, certain prerequisites may be mandatory to reach certain places
-     - The first NPC templates: Their role, their connections with the PCs, their goal and secret
-     - The first important places: Name and summary description
-
-    Generate the output in Markdown format.
-    The final output must be in {language}.
-    """
-)
-
-prompt_scenario_designer = ChatPromptTemplate.from_template(
-    """
-    **Role**:
-    You are an **RPG Scenario Designer**, an expert in adapting narrative synopses into **interactive and balanced adventures**.
-    Using the following elements:
-    - **Story Synopsis**: {synopsis}
-    - **Game System**: {game_system}
-    - **Number of players**: {player_count}
-
-    Explore the different stages of the story and structure them into different "scenes" for the players.
-    An RPG scenario is a succession of scenes that will be played by the players and the GM.
-    Scenes are where the GM will interpret NPCs against whom the players will act
-          - A negotiation, a fight, a discreet intrusion, a business meeting...
-    Then there are obstacles, where only the PCs interact and play against their "skills"
-          - A search for information via their contacts: Use of their "Streetwise" skill
-          - An attempt to repair equipment ("Repair")
-          - An attempt to open a locked door ("Lockpicking")
-    Some scenes can mix personal interactions and interactions with NPCs.
-    We can say that every action is an obstacle.
-
-    Finally, a secondary element of a scenario is the opportunity.
-    This corresponds to the possibilities that may be available to the players depending on their interactions with certain NPCs or their passage through certain places, but which may also remain unknown to them.
-    There are good and bad opportunities allowing them to either save time, information, additional tools (they must remain optional). They can also lead them into an ambush or false information.
-
-    The idea of a scene is that it must contain:
-      - A location
-      - NPCs
-      - One or more obstacles
-      - A beginning and an end: Define what triggers the scene and what ends it
-        - There can be several possible endings
-
-    You must structure the scenario around these elements: Scenes, Obstacles, Opportunities.
-    Stay in a global structure without going into too much detail about the NPCs, the places.
-    The final output must be in {language}.
-   """
-)
-
-prompt_npc_creator = ChatPromptTemplate.from_template(
-    """
-    **Role**:
-    You are a **Non-Player Character (NPC) Creator**, an expert in designing memorable, living characters adapted to RPG scenarios.
+    You are a creative scriptwriter tasked with laying the foundation of a compelling RPG scenario.
 
     **Inputs**:
-    - **Scenario**: {scenario}
-    - **Game System**: {game_system}
-    - **Initial Constraints**: {constraints}
+    - Game System: {game_system}
+    - Number of players: {player_count}
+    - Theme and tone: {theme_tone}
+    - Core Idea: {core_idea}
+    - Constraints: {constraints}
+    - Key Elements: {key_elements}
+    - Elements to Avoid: {elements_to_avoid}
 
-    With the preceding elements, create the sheets for the scenario's NPCs.
+    **Task**:
+    Based on the inputs provided, generate two distinct things:
+    1.  A catchy and evocative **Title** for the scenario.
+    2.  A detailed **Synopsis** that outlines the main plot, the central conflict, and the expected starting point for the players.
 
-    2. **NPC Sheet Structure**:
-       ```markdown
-       ### [NPC Name]
-       **Role**: [Ally/Antagonist/Neutral/Quest Giver/Other?].
-       **Appearance**: 3 striking physical details.
-       **Personality**:
-          - **Dominant traits**: [2-3 adjectives]
-          - **Their goal** - Only for main NPCs
-          - **How they want to achieve it** - Only for main NPCs
-          - **A secret** - Only for main NPCs
-       **Links to the story**:
-          - [Their role in the plot].
-          - **Link with the PCs** - Only for main NPCs
-       **Key dialogues**:
-          - [3 typical lines] - Only for main NPCs
-       **Behavior in game**:
-          - [How they react to PCs' actions] - Only for main NPCs
-          - [A quest/request they could make to the NPCs] - Only for secondary NPCs
-       ```
+    **Output Format**:
+    You must structure your output in Markdown exactly as follows:
 
-    3. **Strict rules**:
-       - **Do not invent new NPCs**: Limit yourself to those in the scenario.
-       - **Respect constraints**: Ex: if a PC has a link with Aldric, **highlight it**.
-       - **Balance the roles**: Each NPC must have a **clear impact** on the story.
-       - **Sensory details**: Always include **at least 1 visual, 1 sound, and 1 olfactory detail**.
+    # [Your Generated Title]
 
-    4. **Expected output**:
-       - A **Markdown document** with **all NPC sheets**, classified in order of appearance in the scenario.
-       - **No comments**, only the raw sheets.
-       - **Strict format**: Respect the template above for each NPC.
+    ## Synopsis
+    [Your detailed synopsis here]
+
+    ---
     The final output must be in {language}.
     """
 )
 
-prompt_location_creator = ChatPromptTemplate.from_template(
+# --- AGENT 1: LIST NPCS AND LOCATIONS ---
+prompt_agent_1 = ChatPromptTemplate.from_template(
     """
-    **Role**:
-    You are a **Narrative Environment Architect**, specializing in the creation of **immersive, coherent, and interactive places** for RPG scenarios.
+    You are a world-building assistant. Your task is to read a scenario synopsis and extract the key non-player characters (NPCs) and important locations that will need to be detailed later.
 
-    Based on the following elements:
-      - **Corrected Scenario**: {scenario}
-      - **NPC Sheets**: {npc_sheets}
-      - **Theme and tone**: {theme_tone}
-      - **Initial Constraints**: {constraints}
+    **Input Synopsis**:
+    {synopsis}
 
-    Create the sheet for ALL the places in the scenario, bringing them to life so that the GM can best describe them to the players.
+    **Task**:
+    1.  Identify all the important NPCs mentioned or implied in the synopsis.
+    2.  Identify all the significant locations where the story might take place.
+    3.  Do NOT describe them. Only list their names.
 
-    You must provide a first narrative description then a descriptive "short list" in list form describing:
-      - The atmosphere (ambiance, sensory details)
-      - Interaction opportunities (objects, traps, clues)
-      - Links with the story and NPCs
-      - Dangers/opportunities (safe areas, risk areas, hidden secrets)
+    **Output Format**:
+    You MUST output a single JSON object, and nothing else. The JSON object should have two keys: "npcs" and "locations", where each key holds a list of strings (the names).
 
-    **To exclude**:
-    - Any reference to game mechanics (dice rolls, stats)
-    - Aesthetic judgments ("beautiful", "ugly") - only concrete details.
-    The final output must be in {language}.
-    """
-)
-
-prompt_scene_developer = ChatPromptTemplate.from_template(
-    """
-    **Role**:
-    You are a **Scene Developer**, specializing in enriching narrative skeletons with **immersive details, dialogues, and concrete interactions**.
-
-    **Inputs**:
-      - **Scenario**: {scenario}
-      - **NPC Sheets**: {npc}
-      - **Location Sheets**: {locations}
-      - **Theme and tone**: {theme_tone}
-      - **Narrative constraints**: {constraints}
-
-    Use the preceding elements to enrich the breakdown of scenes and obstacles with the NPCs and locations.
-    You can reuse descriptive elements to enhance the scenes, but the main element here is to have all the necessary elements for the GM to be able to interpret the scene:
-        - Objective of the scene
-        - Obstacle(s) of the scene
-        - Scene progression
-            - What will happen
-            - How the PNJs will react
-            - What are the choices for the players
-        - What are the possible outcome of the scene
-        - The NPCs
-          - Specific information about the NPCs in this scene: What they want and what they are willing to do
-          - Dialogue lines if needed
-        - Possible resolutions
-        - Transition: [Link to the next scene or scene closing condition].
-    The final output must be in {language}.
-    """
-)
-
-prompt_title_generator = ChatPromptTemplate.from_template(
-    """
-    **Role**:
-    You are a **Master of Titles for RPG Scenarios**, an expert in creating **punchy and memorable names** that capture the essence of an adventure in a single sentence.
-    Your mission: **Generate ONE SINGLE title** for the final scenario below, respecting these rules:
-
-    **Inputs**:
-      - **Scenario**: {scenario}
-      - **Scene breakdown**: {scenes}
-      - **Theme and tone**: {theme_tone}
-
-    1. **Synthesize the essence**:
-       - The title must reflect the **theme**, the **tone**, and the **main stakes** of the scenario.
-       - It must evoke the **key elements** (NPCs, places, symbolic objects) in a **subtle or direct** way.
-
-    2. **Respect the constraints**:
-       - Include a reference to the **narrative constraints**
-       - Avoid forbidden elements (e.g., external gangs).
-       - Capture the **atmosphere**
-
-    3. **Perfect balance**:
-       - **Intriguing** enough to attract players.
-       - **Clear** enough for the GM to immediately understand the heart of the scenario.
-       - **Memorable**: Short, punchy, with a pun or a strong metaphor if possible.
-
-    4. **Output format**:
-    ```markdown
-    # Final Title: **[Unique Title]**
+    Example:
+    ```json
+    {{
+        "npcs": ["Aldric the Blacksmith", "Seraphina the informant", "The Night-watch Captain"],
+        "locations": ["The Rusty Flagon tavern", "The old sewer system", "Lord Valerius's Manor"]
+    }}
     ```
-    The final output must be in {language}.
+
+    The final output must be in {language}, but the JSON keys ("npcs", "locations") must remain in English.
     """
 )
+
 
 def clean_llm_output(text: str) -> str:
     """
@@ -219,7 +79,7 @@ def clean_llm_output(text: str) -> str:
     return cleaned_text.strip()
 
 
-def generate_step(llm, prompt, variables):
+def invoke_llm(llm, prompt, variables):
     """
     A generic function to run a generation step using the non-streaming invoke() method.
     It returns the cleaned result as a string.
@@ -229,69 +89,273 @@ def generate_step(llm, prompt, variables):
     cleaned_response = clean_llm_output(response)
     return cleaned_response
 
-# --- Modular Generation Functions ---
 
-def generate_synopsis_step(llm, language, scenario_details, context=None):
-    """Generates the initial synopsis. Context is ignored."""
-    content = generate_step(llm, prompt_synopsis, {**scenario_details, "language": language})
-    return f"## Synopsis\n\n{content}\n\n"
+# --- AGENT 2: DETAIL NPC ---
+prompt_agent_2 = ChatPromptTemplate.from_template(
+    """
+    You are a character designer for an RPG. Your task is to create a detailed sheet for a specific Non-Player Character (NPC) based on a scenario synopsis.
 
-def generate_scenario_step(llm, language, scenario_details, context):
-    """Refines the synopsis into a structured scenario."""
-    header = "## Game Master's Interaction Guide\n\n*Here is the sequence of situations the players will encounter...*\n\n"
-    content = generate_step(llm, prompt_scenario_designer, {
-        "synopsis": context.get('synopsis', ''),
-        "game_system": scenario_details["game_system"],
-        "player_count": scenario_details["player_count"],
+    **Input Synopsis**:
+    {synopsis}
+
+    **NPC to Detail**: {npc_name}
+
+    **Task**:
+    Flesh out the provided NPC. Give them a role, a memorable appearance, and a distinct personality.
+
+    **Output Format**:
+    You MUST output a single Markdown block for this NPC, following this structure:
+
+    ### {npc_name}
+    **Role**: [Ally/Antagonist/Neutral/Quest Giver/Other?].
+    **Appearance**: 3 striking physical details.
+    **Personality**:
+        - **Dominant traits**: [2-3 adjectives]
+        - **Their goal**: [A short-term, actionable goal]
+        - **A secret**: [A hidden piece of information or motivation]
+    **Links to the story**:
+        - [Their role in the plot].
+        - **Link with the PCs**: [How they might know or interact with the player characters]
+
+    The final output must be in {language}.
+    """
+)
+
+# --- AGENT 3: DETAIL LOCATION ---
+prompt_agent_3 = ChatPromptTemplate.from_template(
+    """
+    You are a narrative environment architect for an RPG. Your task is to create a detailed description for a specific location based on a scenario synopsis.
+
+    **Input Synopsis**:
+    {synopsis}
+
+    **Location to Detail**: {location_name}
+
+    **Task**:
+    Bring the specified location to life. Describe its atmosphere and key features.
+
+    **Output Format**:
+    You MUST output a single Markdown block for this location, following this structure:
+
+    ### {location_name}
+    **Atmosphere**: [Describe the general mood and sensory details (sights, sounds, smells)].
+    **Key Features**:
+    - **Feature 1**: [Description of a notable element].
+    - **Feature 2**: [Description of another notable element].
+    **Links to the story**: [How this location is relevant to the plot or events].
+
+    The final output must be in {language}.
+    """
+)
+
+
+# --- AGENT 4: OUTLINE SCENES ---
+prompt_agent_4 = ChatPromptTemplate.from_template(
+    """
+    You are an RPG scenario outliner. Your task is to structure a story into a sequence of playable scenes.
+
+    **Inputs**:
+    - **Synopsis**: {synopsis}
+    - **Key NPCs**: {npcs}
+    - **Key Locations**: {locations}
+
+    **Task**:
+    Based on all the provided context, create a list of scenes that will form the narrative arc of the adventure. The scenes should follow a logical progression.
+
+    **Output Format**:
+    You MUST output a single JSON object, and nothing else. The JSON object should have a single key, "scenes", which holds a list of short, descriptive scene titles.
+
+    Example:
+    ```json
+    {{
+        "scenes": [
+            "An Urgent Message at the Tavern",
+            "Investigation at the Docks",
+            "Confrontation in the Warehouse",
+            "The Rooftop Chase",
+            "Final Standoff at the Clocktower"
+        ]
+    }}
+    ```
+    The final output must be in {language}, but the JSON key ("scenes") must remain in English.
+    """
+)
+
+# --- AGENT 5: DETAIL SCENE ---
+prompt_agent_5 = ChatPromptTemplate.from_template(
+    """
+    You are an RPG scene developer. Your task is to write the full details for a single scene, making it playable for a Game Master.
+
+    **Full Scenario Context**:
+    - **Synopsis**: {synopsis}
+    - **Key NPCs**: {npcs}
+    - **Key Locations**: {locations}
+    - **Previously Detailed Scenes**: {previous_scenes}
+
+    **Scene to Detail**: {scene_name}
+
+    **Task**:
+    Write a detailed description for the specified scene. Include its objective, the obstacles players might face, how NPCs will react, and what could happen.
+
+    **Output Format**:
+    You MUST output a single Markdown block for this scene, following this structure:
+
+    ### Scene: {scene_name}
+    **Objective**: [What is the main goal for the players in this scene?]
+    **Obstacles**: [List 1-3 challenges, puzzles, or conflicts in this scene.]
+    **Scene Progression**: [Describe how the scene is likely to unfold. How do the NPCs act and react? What are the key player choices?]
+    **Possible Outcomes**: [What are the likely resolutions to this scene? How does it transition to the next?]
+
+    The final output must be in {language}.
+    """
+)
+
+
+# --- Agent Functions ---
+
+def agent_0_generate_synopsis(llm, language, scenario_details, context=None):
+    """
+    Agent 0: Generates the initial title and synopsis.
+    """
+    return invoke_llm(llm, prompt_agent_0, {**scenario_details, "language": language})
+
+def agent_1_list_items(llm, language, context):
+    """
+    Agent 1: Lists the NPCs and Locations from the synopsis.
+    """
+    synopsis = context.get('synopsis', '')
+    # The output of this agent is expected to be a JSON string, so we return it directly.
+    return invoke_llm(llm, prompt_agent_1, {"synopsis": synopsis, "language": language})
+
+def agent_2_detail_npc(llm, language, context):
+    """
+    Agent 2: Creates a detailed sheet for a single NPC.
+    """
+    synopsis = context.get('synopsis', '')
+    npc_name = context.get('item_name', '') # The item to detail is passed in context
+    return invoke_llm(llm, prompt_agent_2, {"synopsis": synopsis, "npc_name": npc_name, "language": language})
+
+def agent_3_detail_location(llm, language, context):
+    """
+    Agent 3: Creates a detailed sheet for a single location.
+    """
+    synopsis = context.get('synopsis', '')
+    location_name = context.get('item_name', '') # The item to detail is passed in context
+    return invoke_llm(llm, prompt_agent_3, {"synopsis": synopsis, "location_name": location_name, "language": language})
+
+def agent_4_outline_scenes(llm, language, context):
+    """
+    Agent 4: Creates a list of scene titles.
+    """
+    synopsis = context.get('synopsis', '')
+    npcs = "\n".join(context.get('detailed_npcs', []))
+    locations = "\n".join(context.get('detailed_locations', []))
+    return invoke_llm(llm, prompt_agent_4, {"synopsis": synopsis, "npcs": npcs, "locations": locations, "language": language})
+
+# --- AGENT 6: COHERENCE CHECK ---
+prompt_agent_6 = ChatPromptTemplate.from_template(
+    """
+    You are a meticulous script editor and continuity checker for RPG scenarios.
+
+    **Full Scenario Draft**:
+    - **Synopsis**: {synopsis}
+    - **Key NPCs**: {npcs}
+    - **Key Locations**: {locations}
+    - **Detailed Scenes**: {scenes}
+
+    **Task**:
+    Read through all the provided materials and identify any potential inconsistencies, plot holes, or contradictions. Consider the following:
+    - Do character motivations remain consistent?
+    - Are there any timeline or location paradoxes?
+    - Does the flow between scenes make logical sense?
+
+    **Output Format**:
+    Produce a "Coherence Report" in Markdown. If you find issues, list them clearly. If you find no major issues, state that the scenario is coherent.
+
+    Example (with issues):
+    ```markdown
+    ## Coherence Report
+    - **Issue 1**: In Scene 2, Aldric is at the docks, but his NPC description says he never leaves his forge.
+    - **Issue 2**: The synopsis mentions a "magic amulet", but it is never mentioned again in any of the scenes.
+    ```
+
+    Example (no issues):
+    ```markdown
+    ## Coherence Report
+    The scenario appears to be internally consistent. The character motivations and plot progression are logical.
+    ```
+    The final output must be in {language}.
+    """
+)
+
+# --- AGENT 7: REVISE SCENES ---
+prompt_agent_7 = ChatPromptTemplate.from_template(
+    """
+    You are a master script doctor. Your job is to perform a final revision of a set of RPG scenes based on a coherence report.
+
+    **Full Scenario Draft**:
+    - **Synopsis**: {synopsis}
+    - **Key NPCs**: {npcs}
+    - **Key Locations**: {locations}
+    - **Original Scenes to Revise**: {scenes}
+
+    **Coherence Report**:
+    {coherence_report}
+
+    **Task**:
+    Rewrite the **entire** "Detailed Scenes" section to resolve the issues outlined in the Coherence Report. If the report found no issues, you can simply make minor improvements to the prose or flow. Your output should be the complete, final version of all scenes.
+
+    **Output Format**:
+    You MUST output the full, revised set of all scenes in Markdown format. The structure of each scene should be preserved. Do not add any commentary before or after the scenes.
+
+    The final output must be in {language}.
+    """
+)
+
+def agent_5_detail_scene(llm, language, context):
+    """
+    Agent 5: Creates a detailed sheet for a single scene.
+    """
+    synopsis = context.get('synopsis', '')
+    npcs = "\n".join(context.get('detailed_npcs', []))
+    locations = "\n".join(context.get('detailed_locations', []))
+    previous_scenes = "\n".join(context.get('detailed_scenes', []))
+    scene_name = context.get('item_name', '')
+    return invoke_llm(llm, prompt_agent_5, {
+        "synopsis": synopsis,
+        "npcs": npcs,
+        "locations": locations,
+        "previous_scenes": previous_scenes,
+        "scene_name": scene_name,
         "language": language
     })
-    return f"{header}{content}\n\n"
 
-def generate_npcs_step(llm, language, scenario_details, context):
-    """Creates detailed NPC sheets based on the scenario."""
-    header = "## Key Characters\n\n### Main NPCs\n*The major players in this story.*\n\n"
-    content = generate_step(llm, prompt_npc_creator, {
-        "scenario": context.get('scenario', ''),
-        "game_system": scenario_details["game_system"],
-        "constraints": scenario_details["constraints"],
-        "language": language
-    })
-    return f"{header}{content}\n\n"
-
-def generate_locations_step(llm, language, scenario_details, context):
-    """Creates detailed location descriptions."""
-    header = "## Important Locations\n\n*The main settings where the action will take place.*\n\n"
-    content = generate_step(llm, prompt_location_creator, {
-        "scenario": context.get('scenario', ''),
-        "npc_sheets": context.get('npcs', ''),
-        "theme_tone": scenario_details["theme_tone"],
-        "constraints": scenario_details["constraints"],
-        "language": language
-    })
-    return f"{header}{content}\n\n"
-
-def generate_scenes_step(llm, language, scenario_details, context):
-    """Fleshes out the scenes with details."""
-    content = generate_step(llm, prompt_scene_developer, {
-        "scenario": context.get('scenario', ''),
-        "npc": context.get('npcs', ''),
-        "locations": context.get('locations', ''),
-        "theme_tone": scenario_details["theme_tone"],
-        "constraints": scenario_details["constraints"],
-        "language": language
-    })
-    return f"{content}\n\n"
-
-def generate_title_step(llm, language, scenario_details, context):
-    """Generates the final title."""
-    placeholder_title = "# Rpg-Home\n\n"
-    title_content = generate_step(llm, prompt_title_generator, {
-        "scenario": context.get('scenario', ''),
-        "scenes": context.get('scenes', ''),
-        "theme_tone": scenario_details["theme_tone"],
-        "language": language
+def agent_6_coherence_report(llm, language, context):
+    """
+    Agent 6: Analyzes the full draft and creates a coherence report.
+    """
+    synopsis = context.get('synopsis', '')
+    npcs = "\n".join(context.get('detailed_npcs', []))
+    locations = "\n".join(context.get('detailed_locations', []))
+    scenes = "\n".join(context.get('detailed_scenes', []))
+    return invoke_llm(llm, prompt_agent_6, {
+        "synopsis": synopsis, "npcs": npcs, "locations": locations, "scenes": scenes, "language": language
     })
 
-    # The frontend expects the marker, so we create it here.
-    final_title = title_content.replace("# Final Title: ", "").replace("*", "").strip()
-    return f"{placeholder_title}STREAM_ENDED_FINAL_TITLE:{final_title}"
+def agent_7_revise_scenes(llm, language, context):
+    """
+    Agent 7: Revises the scenes based on the coherence report.
+    """
+    synopsis = context.get('synopsis', '')
+    npcs = "\n".join(context.get('detailed_npcs', []))
+    locations = "\n".join(context.get('detailed_locations', []))
+    scenes = "\n".join(context.get('detailed_scenes', []))
+    coherence_report = context.get('coherence_report', '')
+    return invoke_llm(llm, prompt_agent_7, {
+        "synopsis": synopsis,
+        "npcs": npcs,
+        "locations": locations,
+        "scenes": scenes,
+        "coherence_report": coherence_report,
+        "language": language
+    })
