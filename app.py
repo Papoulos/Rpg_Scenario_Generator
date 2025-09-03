@@ -3,6 +3,7 @@ import re
 import time
 import uuid
 import os
+import json5 as json
 from bs4 import BeautifulSoup
 from flask import Flask, render_template, request, Response, jsonify, stream_with_context
 import requests
@@ -12,6 +13,28 @@ from chat import run_chat_completion, get_llm_instance
 from llm_config import get_provider_config, llm_providers
 
 app = Flask(__name__)
+
+def extract_json_from_response(text: str) -> str:
+    """
+    Finds and extracts the first valid JSON object from a string.
+    Handles cases where the LLM might add markdown ```json ... ``` tags.
+    Returns the JSON object as a string, or an empty JSON object '{}' if not found.
+    """
+    # Look for a JSON block within ```json ... ```
+    json_match = re.search(r'```json\s*(\{.*?\})\s*```', text, re.DOTALL)
+    if json_match:
+        text = json_match.group(1)
+
+    # If not found, look for any substring that looks like a JSON object
+    json_match = re.search(r'\{.*\}', text, re.DOTALL)
+    if json_match:
+        text = json_match.group(0)
+
+    # Remove trailing commas from arrays and objects
+    text = re.sub(r',\s*(\]|})', r'\1', text)
+
+    return text if text else "{}"
+
 
 @app.route('/')
 def index():
@@ -62,6 +85,19 @@ def generate():
             scenario_details=details,
             context=context
         )
+
+        # --- Post-process for JSON-based steps ---
+        if step in ['agent_1_list_items', 'agent_4_outline_scenes']:
+            json_string = extract_json_from_response(response_text)
+            # Validate and send the JSON response
+            try:
+                # This ensures the string is valid JSON before sending.
+                json.loads(json_string)
+                return Response(json_string, mimetype='application/json')
+            except json.JSONDecodeError:
+                app.logger.error(f"Failed to parse JSON from LLM for step {step}. Raw output: {response_text}")
+                # Return a valid, empty JSON object to prevent client-side errors
+                return Response("{}", mimetype='application/json', status=500)
 
         return Response(response_text, mimetype='text/plain')
 
