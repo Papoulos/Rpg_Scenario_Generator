@@ -219,11 +219,11 @@ def agent_0_generate_synopsis(llm, language, scenario_details, context=None):
     """
     return invoke_llm(llm, prompt_agent_0, {**scenario_details, "language": language})
 
-def agent_1_list_items(llm, language, context):
+def agent_1_list_items(llm, language, scenario_details, context=None):
     """
     Agent 1: Lists the NPCs and Locations from the synopsis.
     """
-    synopsis = context.get('synopsis', '')
+    synopsis = scenario_details
     # The output of this agent is expected to be a JSON string, so we return it directly.
     return invoke_llm(llm, prompt_agent_1, {"synopsis": synopsis, "language": language})
 
