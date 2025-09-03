@@ -107,18 +107,6 @@ Output Requirements:
 
 Example Outputs:
 
-Valid:
-{{
-    "npcs": ["The Stormcaller", "Old Man Harkin", "The Faceless Choir"],
-    "locations": ["The Weeping Spire", "Harkin's Boat", "The Bone Marshes"]
-}}
-
-Empty case:
-{{
-    "npcs": [],
-    "locations": ["The Abandoned Lighthouse"]
-}}
-=======
 - A valid JSON output looks like this: `{"npcs": ["The Stormcaller", "Old Man Harkin"], "locations": ["The Weeping Spire", "The Bone Marshes"]}`
 - If no NPCs are found, the JSON should look like this: `{"npcs": [], "locations": ["The Abandoned Lighthouse"]}`
 
