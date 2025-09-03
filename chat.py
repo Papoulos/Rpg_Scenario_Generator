@@ -83,16 +83,18 @@ def get_llm_instance(model_name: str):
     else:
         raise ValueError(f"Unsupported LLM service: {service}")
 
-def run_chat_completion(model_name: str, messages: list):
+def run_chat_completion(model_name: str, messages: list, stream: bool = False):
     """
     Runs a chat completion with the specified model and messages.
 
     Args:
         model_name (str): The name of the model to use.
         messages (list): A list of message dictionaries, e.g., [{"role": "user", "content": "Hello"}].
+        stream (bool): If True, streams the response.
 
     Returns:
-        The content of the AI's response message.
+        If stream is False, a string with the full response.
+        If stream is True, a generator that yields response chunks.
     """
     llm = get_llm_instance(model_name)
 
@@ -111,5 +113,8 @@ def run_chat_completion(model_name: str, messages: list):
             chat_messages.append(SystemMessage(content=msg["content"]))
         # LangChain automatically handles assistant messages in the history
 
-    response = llm.invoke(chat_messages)
-    return response.content
+    if stream:
+        return (chunk.content for chunk in llm.stream(chat_messages))
+    else:
+        response = llm.invoke(chat_messages)
+        return response.content
