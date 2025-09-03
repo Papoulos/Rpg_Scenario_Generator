@@ -74,27 +74,59 @@ They say if you stand on the western cliffs at dusk, when the storm's edge glows
 # --- AGENT 1: LIST NPCS AND LOCATIONS ---
 prompt_agent_1 = ChatPromptTemplate.from_template(
     """
-    You are a world-building assistant. Your task is to read a scenario synopsis and extract the key non-player characters (NPCs) and important locations that will need to be detailed later.
+Role:
+You are a precision extraction engine for RPG world-building. Your sole function is to parse a narrative synopsis and output ONLY the raw lists of implied NPCs and locations.
 
-    **Input Synopsis**:
-    {synopsis}
+Input:
+- synopsis: {synopsis}  # The full scenario synopsis text
 
-    **Task**:
-    1.  Identify all the important NPCs mentioned or implied in the synopsis.
-    2.  Identify all the significant locations where the story might take place.
-    3.  Do NOT describe them. Only list their names.
+Processing Rules:
+1. NPC Identification:
+   - Extract ALL named or strongly implied characters (including groups/archetypes)
+   - For unnamed but clearly present entities, use descriptive titles:
+     * "The blind librarian" (not "a blind librarian")
+     * "The storm's voice" (not "the storm")
+   - Exclude: generic terms ("villagers"), player characters, or purely metaphorical entities
 
-    **Output Format**:
-    You MUST output a single JSON object, and nothing else. The JSON object should have two keys: "npcs" and "locations", where each key holds a list of strings (the names).
+2. Location Identification:
+   - Extract ALL named or strongly implied physical spaces
+   - For unnamed but clearly present places, use descriptive titles:
+     * "The floating market" (not "a market")
+     * "The clocktower's hidden chamber"
+   - Exclude: vague areas ("the wilderness"), temporary spaces ("a battlefield")
 
-    Example:
-    {{
-        "npcs": ["Aldric the Blacksmith", "Seraphina the informant", "The Night-watch Captain"],
-        "locations": ["The Rusty Flagon tavern", "The old sewer system", "Lord Valerius's Manor"]
-    }}
+3. Formatting:
+   - Names must be in title case (English) or proper case ({language})
+   - No descriptions, notes, or additional text
+   - No empty arrays - if none found, return empty list []
 
-    The final output must be in {language}, but the JSON keys ("npcs", "locations") must remain in English.
-    """
+Output Requirements:
+- STRICT JSON format only (no markdown, no comments)
+- Keys MUST be "npcs" and "locations" (English, regardless of language)
+- Values MUST be arrays of strings
+- NO trailing commas or formatting errors
+- The final output must be in {language}.
+
+Example Outputs:
+Valid:
+{
+    "npcs": ["The Stormcaller", "Old Man Harkin", "The Faceless Choir"],
+    "locations": ["The Weeping Spire", "Harkin's Boat", "The Bone Marshes"]
+}
+
+Empty case:
+{
+    "npcs": [],
+    "locations": ["The Abandoned Lighthouse"]
+}
+
+Strict Prohibitions:
+- NO descriptions or attributes
+- NO nested objects or additional fields
+- NO explanatory text or metadata
+- NO changes to the required JSON structure
+"""
+
 )
 
 
