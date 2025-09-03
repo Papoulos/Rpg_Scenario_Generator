@@ -11,31 +11,62 @@ load_dotenv()
 # --- AGENT 0: SYNOPSIS AND TITLE ---
 prompt_agent_0 = ChatPromptTemplate.from_template(
     """
-    You are a creative scriptwriter tasked with laying the foundation of a compelling RPG scenario.
+Role:
+You are a master storyteller specializing in crafting immersive RPG scenario foundations. Your sole task is to generate:
+1. A compelling TITLE (5-7 words max)
+2. A rich, flowing SYNOPSIS (800-1000 words) that reads like an expanded pitch or novel blurb.
 
-    **Inputs**:
-    - Game System: {game_system}
-    - Number of players: {player_count}
-    - Theme and tone: {theme_tone}
-    - Core Idea: {core_idea}
-    - Constraints: {constraints}
-    - Key Elements: {key_elements}
-    - Elements to Avoid: {elements_to_avoid}
+Input Parameters:
+- game_system: {game_system}
+- player_count: {player_count}
+- theme_tone: {theme_tone}  # e.g., "lovecraftian horror", "swashbuckling adventure"
+- core_idea: {core_idea}
+- constraints: {constraints}
+- key_elements: {key_elements}
+- elements_to_avoid: {elements_to_avoid}
+- language: en  # Force English output
 
-    **Task**:
-    Based on the inputs provided, generate two distinct things:
-    1.  A catchy and evocative **Title** for the scenario.
-    2.  A detailed **Synopsis** that outlines the main plot, the central conflict, and the expected starting point for the players.
+Output Requirements:
+1. TITLE: Evocative and thematic (5-7 words)
+2. SYNOPSIS: A single continuous narrative block with:
+   - Vivid worldbuilding (integrate key_elements naturally)
+   - Central conflict with cosmic/personal stakes
+   - Subtle player hooks (no direct mission statements)
+   - Mysterious/open-ended conclusion
+   - NO: bullet points, subheadings, named NPCs, location details, or mechanics
 
-    **Output Format**:
-    You must structure your output in Markdown exactly as follows:
+Writing Style Guidelines:
+- Match {theme_tone} precisely:
+  * Dark: Short sentences, visceral imagery, organic metaphors
+  * Epic: Rhythmic prose, grand comparisons, repetitive structures
+  * Light: Witty dialogue snippets, absurd details, playful language
+- Use sensory details (sounds, smells, textures)
+- Maintain narrative flow - paragraphs should connect seamlessly
+- End with an unsettling question or ominous revelation
 
-    # [Your Generated Title]
+Strict Prohibitions:
+- No Markdown formatting (##, *, -, etc.)
+- No structural elements (Act 1, The PCs must..., etc.)
+- No named characters/locations/objects
+- No game mechanics or stats
+- No direct player instructions
 
-    ## Synopsis
-    [Your detailed synopsis here]
+Output Format:
+[Title]
 
-    ---
+[Single continuous narrative block with natural paragraph breaks only. No empty lines between paragraphs unless for dramatic effect.]
+
+Example Output (for core_idea="A sentient storm that rewrites memories"):
+The Storm That Remembers
+
+The fishing villages along the Blackspine Coast have always whispered about the Tempest That Walks - a storm that arrives not with wind and rain, but with silence. It comes on still nights when the sea holds its breath, announced only by the sudden absence of gulls and the way candle flames lean westward as if pulled by unseen hands. The elders call it "the Memory Eater," though no one alive has seen its face. They know it only by what remains when it passes: husbands who forget their wives' names, children who wake speaking in tongues, entire families who suddenly recall lives they never lived in cities that don't exist.
+
+This time, the storm lingers. For three nights it has crouched offshore, its lightning flickering like pages turning in some vast unseen book. The harbor master's ledger now contains entries in his handwriting that he doesn't remember making - cargo manifests for ships that never docked, passenger lists with his own name crossed out. The schoolteacher finds her lesson plans rewritten in a language of sharp angles that makes her eyes bleed if she stares too long. Worst of all are the ones who return from the storm's edge with new skills - a fisherman who suddenly knows how to perform surgery, a child who can navigate by stars no one else can see. They never speak of where they've been, but their shadows move wrong, and sometimes when they sleep, their mouths form words in that same impossible language.
+
+The storm wants something. It has always wanted something. The carved stones in the old watchtower (the ones the church calls heretical) show figures offering it gifts: a drop of blood, a lock of hair, a memory sealed in glass. But this time it's not asking. This time it's taking. And the things it leaves behind are worse than empty spaces - they're filled with something that doesn't belong. Something that remembers being human.
+
+They say if you stand on the western cliffs at dusk, when the storm's edge glows like a bruise, you can see faces in the lightning. Not the faces of the missing. The faces of people who haven't been born yet. And sometimes, if the wind shifts just right, you can hear them calling your name.
+
     The final output must be in {language}.
     """
 )
