@@ -1,5 +1,5 @@
 import os
-import json
+import json5 as json
 import logging
 from dotenv import load_dotenv
 
@@ -49,16 +49,23 @@ llm_providers = {
 
 def load_custom_llm_config():
     """
-    Loads custom LLM configurations from an external JSON file if specified.
-    The path to the file is retrieved from the CUSTOM_LLM_CONFIG_PATH environment variable.
+    Loads custom LLM configurations.
+    It first checks for the CUSTOM_LLM_CONFIG_PATH environment variable.
+    If not set, it falls back to checking for a 'custom_llm.json' file in the root directory.
     """
     config_path = os.getenv("CUSTOM_LLM_CONFIG_PATH")
+    using_env_var = True
     if not config_path:
-        logging.info("CUSTOM_LLM_CONFIG_PATH not set. Skipping loading of custom LLM config.")
-        return
+        using_env_var = False
+        config_path = "custom_llm.json"  # Default fallback path
+        logging.info("CUSTOM_LLM_CONFIG_PATH not set. Falling back to default 'custom_llm.json'.")
 
     if not os.path.exists(config_path):
-        logging.warning(f"Custom LLM config file not found at: {config_path}")
+        if using_env_var:
+            logging.warning(f"Custom LLM config file specified by CUSTOM_LLM_CONFIG_PATH not found at: {config_path}")
+        else:
+            # This is not a warning, as it's the default behavior if the file doesn't exist.
+            logging.info("No 'custom_llm.json' file found in the root directory. Skipping custom LLM configuration.")
         return
 
     try:
@@ -66,13 +73,16 @@ def load_custom_llm_config():
             custom_configs = json.load(f)
 
         # Merge the custom configurations into the main providers dictionary
-        llm_providers.update(custom_configs)
-        logging.info(f"Successfully loaded and merged {len(custom_configs)} custom LLM provider(s) from {config_path}.")
+        if custom_configs:
+            llm_providers.update(custom_configs)
+            logging.info(f"Successfully loaded and merged {len(custom_configs)} custom LLM provider(s) from {config_path}.")
+        else:
+            logging.info(f"Custom config file at {config_path} is empty. No custom models loaded.")
 
     except json.JSONDecodeError:
-        logging.error(f"Error decoding JSON from the custom LLM config file: {config_path}")
+        logging.error(f"Error decoding JSON from the custom LLM config file: {config_path}. Please check for syntax errors.")
     except Exception as e:
-        logging.error(f"An unexpected error occurred while loading custom LLM config: {e}")
+        logging.error(f"An unexpected error occurred while loading custom LLM config from {config_path}: {e}")
 
 # --- Initialize Configurations ---
 # Load custom configurations when the module is imported.
