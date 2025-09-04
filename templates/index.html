@@ -113,187 +113,57 @@
         const markdownContentInput = document.getElementById('markdown_content');
         const submitButton = form.querySelector('button[type="submit"]');
 
-        // --- State Management for the new Agent Architecture ---
-        let generationState = {
-            phase: 'start', // start, synopsis, list_items, detail_npcs, detail_locations, outline_scenes, detail_scenes, coherence_check, revise_scenes, done
-            initialDetails: {},
-            context: {
-                synopsis: '',
-                npc_list: [],
-                location_list: [],
-                scene_list: [],
-                detailed_npcs: [],
-                detailed_locations: [],
-                detailed_scenes: [],
-                coherence_report: '',
-            },
-            loopIndex: 0,
-            isGenerating: false,
-        };
-
-        // --- Main Handler ---
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
-            if (generationState.isGenerating) return;
 
-            generationState.isGenerating = true;
+            // Disable button and show spinner
             submitButton.disabled = true;
+            submitButton.textContent = 'Génération en cours...';
             spinner.style.display = 'block';
+            resultContainer.style.display = 'block';
+            resultHtml.innerHTML = ''; // Clear previous results
 
-            if (generationState.phase === 'start') {
-                resultContainer.style.display = 'block';
-                const formData = new FormData(form);
-                generationState.initialDetails = Object.fromEntries(formData.entries());
-                Array.from(form.elements).forEach(el => {
-                    if(el.tagName !== 'BUTTON') el.disabled = true;
-                });
-                generationState.phase = 'synopsis';
-            }
+            // Gather form data
+            const formData = new FormData(form);
+            const inputs = Object.fromEntries(formData.entries());
 
-            let stepName = '';
-            let requestContext = { ...generationState.context };
-
-            // Determine which agent to call based on the current phase
-            switch (generationState.phase) {
-                case 'synopsis': stepName = 'agent_0_synopsis'; break;
-                case 'list_items': stepName = 'agent_1_list_items'; break;
-                case 'detail_npcs':
-                    stepName = 'agent_2_detail_npc';
-                    requestContext.item_name = generationState.context.npc_list[generationState.loopIndex];
-                    break;
-                case 'detail_locations':
-                    stepName = 'agent_3_detail_location';
-                    requestContext.item_name = generationState.context.location_list[generationState.loopIndex];
-                    break;
-                case 'outline_scenes': stepName = 'agent_4_outline_scenes'; break;
-                case 'detail_scenes':
-                    stepName = 'agent_5_detail_scene';
-                    requestContext.item_name = generationState.context.scene_list[generationState.loopIndex];
-                    break;
-                case 'coherence_check': stepName = 'agent_6_coherence_report'; break;
-                case 'revise_scenes': stepName = 'agent_7_revise_scenes'; break;
-            }
+            // The user must select one of the initial hooks.
+            // For this refactoring, we'll just pretend the first hook is chosen.
+            // A future improvement would be to present the hooks to the user.
+            inputs.accroche_selectionnee = "La première proposition générée par l'Idéateur.";
 
             try {
-                const detailsPayload = generationState.phase === 'synopsis'
-                    ? generationState.initialDetails
-                    : generationState.context.synopsis;
-
+                // Single API call to the new backend
                 const response = await fetch('/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        step: stepName,
-                        model_name: generationState.initialDetails.llm_model,
-                        language: generationState.initialDetails.language,
-                        details: detailsPayload,
-                        context: requestContext
-                    }),
+                    body: JSON.stringify(inputs),
                 });
 
-                if (!response.ok) { throw new Error(`Server error: ${response.status}. ${await response.text()}`); }
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}. ${await response.text()}`);
+                }
 
-                const responseText = await response.text();
-                await processResponse(responseText);
-                updateDisplay();
-                updateButton();
+                const markdownResponse = await response.text();
+
+                // Render the full markdown response
+                resultHtml.innerHTML = marked.parse(markdownResponse);
+
+                // Populate the hidden form for PDF download
+                markdownContentInput.value = markdownResponse;
+                pdfForm.style.display = 'block';
+                submitButton.textContent = 'Génération Terminée';
 
             } catch (error) {
-                resultHtml.innerHTML += `<p style="color: red;"><strong>Error:</strong> ${error.message}</p>`;
+                resultHtml.innerHTML = `<p style="color: red;"><strong>Error:</strong> ${error.message}</p>`;
                 console.error('Generation failed:', error);
                 submitButton.textContent = 'Erreur';
+                // Re-enable the button on error so the user can try again
+                submitButton.disabled = false;
             } finally {
-                generationState.isGenerating = false;
                 spinner.style.display = 'none';
-                if (generationState.phase !== 'done') {
-                    submitButton.disabled = false;
-                }
             }
         });
-
-        async function processResponse(responseText) {
-            const phase = generationState.phase;
-            if (phase === 'synopsis') {
-                generationState.context.synopsis = responseText;
-                generationState.phase = 'list_items';
-            } else if (phase === 'list_items') {
-                const items = JSON.parse(responseText);
-                generationState.context.npc_list = items.npcs || [];
-                generationState.context.location_list = items.locations || [];
-                generationState.phase = generationState.context.npc_list.length > 0 ? 'detail_npcs' : 'detail_locations';
-            } else if (phase === 'detail_npcs') {
-                generationState.context.detailed_npcs.push(responseText);
-                generationState.loopIndex++;
-                if (generationState.loopIndex >= generationState.context.npc_list.length) {
-                    generationState.phase = generationState.context.location_list.length > 0 ? 'detail_locations' : 'outline_scenes';
-                    generationState.loopIndex = 0;
-                }
-            } else if (phase === 'detail_locations') {
-                generationState.context.detailed_locations.push(responseText);
-                generationState.loopIndex++;
-                if (generationState.loopIndex >= generationState.context.location_list.length) {
-                    generationState.phase = 'outline_scenes';
-                    generationState.loopIndex = 0;
-                }
-            } else if (phase === 'outline_scenes') {
-                const items = JSON.parse(responseText);
-                generationState.context.scene_list = items.scenes || [];
-                generationState.phase = generationState.context.scene_list.length > 0 ? 'detail_scenes' : 'coherence_check';
-            } else if (phase === 'detail_scenes') {
-                generationState.context.detailed_scenes.push(responseText);
-                generationState.loopIndex++;
-                if (generationState.loopIndex >= generationState.context.scene_list.length) {
-                    generationState.phase = 'coherence_check';
-                    generationState.loopIndex = 0;
-                }
-            } else if (phase === 'coherence_check') {
-                generationState.context.coherence_report = responseText;
-                generationState.phase = 'revise_scenes';
-            } else if (phase === 'revise_scenes') {
-                generationState.context.detailed_scenes = [responseText];
-                generationState.phase = 'done';
-            }
-        }
-
-        function updateDisplay() {
-            let fullHtml = '';
-            const context = generationState.context;
-            if (context.synopsis) fullHtml += marked.parse(context.synopsis);
-            if (context.detailed_npcs.length > 0) fullHtml += '<h2>Personnages</h2>' + marked.parse(context.detailed_npcs.join('\n\n'));
-            if (context.detailed_locations.length > 0) fullHtml += '<h2>Lieux</h2>' + marked.parse(context.detailed_locations.join('\n\n'));
-            if (context.detailed_scenes.length > 0) fullHtml += '<h2>Scènes</h2>' + marked.parse(context.detailed_scenes.join('\n\n'));
-            if (context.coherence_report) fullHtml += '<h2>Rapport de Cohérence</h2>' + marked.parse(context.coherence_report);
-            resultHtml.innerHTML = fullHtml;
-            resultContainer.scrollTop = resultContainer.scrollHeight;
-        }
-
-        function updateButton() {
-            const phase = generationState.phase;
-            const context = generationState.context;
-            let text = 'Suivant';
-
-            if (phase === 'list_items') text = 'Lister les PNJ & Lieux';
-            else if (phase === 'detail_npcs') {
-                const total = context.npc_list.length;
-                text = `Détailler PNJ (${generationState.loopIndex + 1}/${total})`;
-            } else if (phase === 'detail_locations') {
-                const total = context.location_list.length;
-                text = `Détailler Lieu (${generationState.loopIndex + 1}/${total})`;
-            } else if (phase === 'outline_scenes') text = 'Structurer les Scènes';
-            else if (phase === 'detail_scenes') {
-                const total = context.scene_list.length;
-                text = `Détailler Scène (${generationState.loopIndex + 1}/${total})`;
-            } else if (phase === 'coherence_check') text = 'Vérifier la Cohérence';
-            else if (phase === 'revise_scenes') text = 'Appliquer les Corrections';
-            else if (phase === 'done') {
-                text = 'Génération Terminée';
-                submitButton.disabled = true;
-                const fullMarkdown = `${context.synopsis}\n\n## Personnages\n${context.detailed_npcs.join('\n\n')}\n\n## Lieux\n${context.detailed_locations.join('\n\n')}\n\n## Scènes\n${context.detailed_scenes.join('\n\n')}`;
-                markdownContentInput.value = fullMarkdown;
-                pdfForm.style.display = 'block';
-            }
-            submitButton.textContent = text;
-        }
     </script>
 </body>
 </html>

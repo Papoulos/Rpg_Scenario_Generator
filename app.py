@@ -1,113 +1,78 @@
 import markdown2
 import re
-import time
-import uuid
 import os
-import json5 as json
+from dotenv import load_dotenv
+print("--- App execution started ---", flush=True)
 from bs4 import BeautifulSoup
-from flask import Flask, render_template, request, Response, jsonify, stream_with_context
+from flask import Flask, render_template, request, Response, jsonify
 import requests
 from weasyprint import HTML
-import generator
-from chat import run_chat_completion, get_llm_instance
-from llm_config import get_provider_config, llm_providers
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Import the crew from our new configuration
+from config.crew import scenario_crew
+from llm_config import llm_providers
 
 app = Flask(__name__)
-
-def extract_json_from_response(text: str) -> str:
-    """
-    Finds and extracts the first valid JSON object from a string.
-    Handles cases where the LLM might add markdown ```json ... ``` tags.
-    Returns the JSON object as a string, or an empty JSON object '{}' if not found.
-    """
-    # Look for a JSON block within ```json ... ```
-    json_match = re.search(r'```json\s*(\{.*?\})\s*```', text, re.DOTALL)
-    if json_match:
-        text = json_match.group(1)
-
-    # If not found, look for any substring that looks like a JSON object
-    json_match = re.search(r'\{.*\}', text, re.DOTALL)
-    if json_match:
-        text = json_match.group(0)
-
-    # Remove trailing commas from arrays and objects
-    text = re.sub(r',\s*(\]|})', r'\1', text)
-
-    return text if text else "{}"
 
 
 @app.route('/')
 def index():
+    # The user can still choose a model, though our crew is hardcoded to Gemini for now.
+    # This can be adapted later.
     model_names = list(llm_providers.keys())
     return render_template('index.html', models=model_names)
 
 @app.route('/generate', methods=['POST'])
 def generate():
     """
-    Handles step-by-step scenario generation based on the new agent architecture.
+    Handles the full scenario generation using the CrewAI crew.
     """
     data = request.get_json()
     if not data:
         return Response("Error: Invalid JSON payload.", status=400)
 
-    step = data.get('step')
-    model_name = data.get('model_name')
-    language = data.get('language')
-    details = data.get('details')
-    context = data.get('context', {})
+    # --- Lazy LLM Initialization ---
+    # The LLM is initialized here, inside the request, to avoid
+    # the app crashing on startup if the API key is invalid.
+    try:
+        llm = ChatGoogleGenerativeAI(
+            model="gemini-1.5-flash",
+            verbose=True,
+            temperature=0.7,
+            google_api_key=os.getenv("GOOGLE_API_KEY")
+        )
+        # Assign the initialized LLM to each agent in the crew
+        for agent in scenario_crew.agents:
+            agent.llm = llm
+    except Exception as e:
+        app.logger.error(f"Failed to initialize LLM: {e}")
+        return Response("Error: Could not initialize the Language Model. Please check your API key.", status=500)
 
-    if not all([step, model_name, language, details]):
-        return Response("Error: Missing required parameters in JSON payload.", status=400)
 
-    # --- Map step name to agent function ---
-    step_functions = {
-        'agent_0_synopsis': generator.agent_0_generate_synopsis,
-        'agent_1_list_items': generator.agent_1_list_items,
-        'agent_2_detail_npc': generator.agent_2_detail_npc,
-        'agent_3_detail_location': generator.agent_3_detail_location,
-        'agent_4_outline_scenes': generator.agent_4_outline_scenes,
-        'agent_5_detail_scene': generator.agent_5_detail_scene,
-        'agent_6_coherence_report': generator.agent_6_coherence_report,
-        'agent_7_revise_scenes': generator.agent_7_revise_scenes,
+    # The new frontend will send all parameters at once.
+    # We'll need to adapt the frontend to send this structure.
+    # For now, we define them here. A placeholder for the selected hook is needed.
+    inputs = {
+        'theme': data.get('theme', 'Fantasy'),
+        'motif': data.get('motif', 'Aventure'),
+        'contraintes': data.get('contraintes', 'Pas de magie'),
+        'accroche_selectionnee': data.get('accroche_selectionnee', "L'accroche par défaut sera utilisée si aucune n'est fournie.")
     }
 
-    if step not in step_functions:
-        return Response(f"Error: Invalid step '{step}' provided.", status=400)
-
     try:
-        llm = get_llm_instance(model_name)
-        generation_function = step_functions[step]
+        # Kick off the crew's process.
+        # This is a blocking call that will run all defined tasks.
+        result = scenario_crew.kickoff(inputs=inputs)
 
-        # Call the appropriate function with its required arguments
-        response_text = generation_function(
-            llm=llm,
-            language=language,
-            scenario_details=details,
-            context=context
-        )
+        # The result is the output of the final task (compilation).
+        return Response(result, mimetype='text/plain')
 
-        # --- Post-process for JSON-based steps ---
-        if step in ['agent_1_list_items', 'agent_4_outline_scenes']:
-            json_string = extract_json_from_response(response_text)
-            # Validate and send the JSON response
-            try:
-                # This ensures the string is valid JSON before sending.
-                json.loads(json_string)
-                return Response(json_string, mimetype='application/json')
-            except json.JSONDecodeError:
-                app.logger.error(f"Failed to parse JSON from LLM for step {step}. Raw output: {response_text}")
-                # Return a valid, empty JSON object to prevent client-side errors
-                return Response("{}", mimetype='application/json', status=500)
-
-        return Response(response_text, mimetype='text/plain')
-
-    except ValueError as e:
-        # Catches configuration errors from get_llm_instance
-        error_message = f"Configuration error for model '{model_name}': {e}"
-        return Response(error_message, status=400)
     except Exception as e:
-        app.logger.error(f"An unexpected error occurred during generation: {e}")
-        return Response("An internal server error occurred.", status=500)
+        app.logger.error(f"An unexpected error occurred during crew execution: {e}")
+        return Response("An internal server error occurred during generation.", status=500)
 
 
 def slugify(text):
@@ -271,189 +236,6 @@ def download_pdf():
         mimetype='application/pdf',
         headers={'Content-Disposition': 'attachment;filename=scenario.pdf'}
     )
-
-@app.route('/v1/chat/completions', methods=['POST'])
-def chat_completions():
-    # --- 1. Authentication ---
-    api_key = request.headers.get("X-API-Key")
-    if not api_key:
-        return jsonify({"error": "X-API-Key header is missing"}), 401
-
-    # --- 2. Request Body Validation ---
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "Request body must be JSON"}), 400
-
-    model = data.get("model")
-    messages = data.get("messages")
-    stream = data.get("stream", False)
-
-    if not model or not messages:
-        return jsonify({"error": "Missing 'model' or 'messages' in request body"}), 400
-
-    if not get_provider_config(model):
-        return jsonify({"error": f"Model '{model}' is not configured or supported."}), 404
-
-    # --- 3. Handle Streaming or Non-Streaming ---
-    if stream:
-        def generate_stream():
-            response_id = f"chatcmpl-{uuid.uuid4()}"
-            created_timestamp = int(time.time())
-            try:
-                content_stream = run_chat_completion(model_name=model, messages=messages, stream=True)
-
-                for chunk in content_stream:
-                    if chunk:  # Ensure not to send empty chunks
-                        chunk_data = {
-                            "id": response_id,
-                            "object": "chat.completion.chunk",
-                            "created": created_timestamp,
-                            "model": model,
-                            "choices": [{
-                                "index": 0,
-                                "delta": {"content": chunk},
-                                "finish_reason": None,
-                            }],
-                        }
-                        yield f"data: {json.dumps(chunk_data)}\n\n"
-
-                # Send the final chunk with finish_reason
-                final_chunk = {
-                    "id": response_id,
-                    "object": "chat.completion.chunk",
-                    "created": created_timestamp,
-                    "model": model,
-                    "choices": [{
-                        "index": 0,
-                        "delta": {},
-                        "finish_reason": "stop",
-                    }],
-                }
-                yield f"data: {json.dumps(final_chunk)}\n\n"
-                yield "data: [DONE]\n\n"
-
-            except Exception as e:
-                app.logger.error(f"An error occurred during streaming: {e}")
-                error_payload = {"error": {"message": str(e), "type": "stream_error"}}
-                yield f"data: {json.dumps(error_payload)}\n\n"
-
-        return Response(stream_with_context(generate_stream()), mimetype='text/event-stream')
-
-    else: # Non-streaming response
-        try:
-            ai_response_content = run_chat_completion(model_name=model, messages=messages, stream=False)
-            response_id = f"chatcmpl-{uuid.uuid4()}"
-            created_timestamp = int(time.time())
-
-            response = {
-                "id": response_id,
-                "object": "chat.completion",
-                "created": created_timestamp,
-                "model": model,
-                "choices": [{
-                    "index": 0,
-                    "message": {
-                        "role": "assistant",
-                        "content": ai_response_content,
-                    },
-                    "finish_reason": "stop",
-                }],
-                "usage": {
-                    "prompt_tokens": 0,
-                    "completion_tokens": 0,
-                    "total_tokens": 0,
-                },
-            }
-            return jsonify(response)
-
-        except ValueError as e:
-            return jsonify({"error": str(e)}), 400
-        except Exception as e:
-            app.logger.error(f"An unexpected error occurred: {e}")
-            return jsonify({"error": "An internal server error occurred."}), 500
-
-
-@app.route('/test-connection/<model_name>')
-def test_connection(model_name):
-    """
-    A debugging endpoint to test network connectivity to a model's endpoint.
-    This now simulates a real POST request to the /chat/completions endpoint.
-    """
-    provider_config = get_provider_config(model_name)
-    if not provider_config:
-        return jsonify({
-            "status": "failure",
-            "message": f"Model '{model_name}' not found in configuration."
-        }), 404
-
-    base_endpoint = provider_config.get("endpoint")
-    if not base_endpoint:
-        return jsonify({
-            "status": "failure",
-            "message": f"Model '{model_name}' does not have an endpoint configured."
-        }), 400
-
-    # Construct the full URL, ensuring no double slashes
-    full_url = f"{base_endpoint.rstrip('/')}/chat/completions"
-
-    # --- Start Header Construction ---
-    final_headers = {"Content-Type": "application/json"}
-
-    custom_headers_config = provider_config.get("headers")
-    if custom_headers_config:
-        for key, value in custom_headers_config.items():
-            placeholders = re.findall(r"\{(.+?)\}", str(value))
-            processed_value = str(value)
-            for placeholder in placeholders:
-                env_value = os.getenv(placeholder, "")
-                processed_value = processed_value.replace(f"{{{placeholder}}}", env_value)
-            final_headers[key] = processed_value
-    else:
-        api_key_name = provider_config.get('api_key_name')
-        api_key = os.getenv(api_key_name) if api_key_name else ""
-        if api_key:
-            final_headers["Authorization"] = f"Bearer {api_key}"
-    # --- End Header Construction ---
-
-    payload = {
-        "model": provider_config.get("model_name", "test"),
-        "messages": [{"role": "user", "content": "test"}]
-    }
-
-    try:
-        timeout_value = provider_config.get("timeout", 60)
-        try:
-            timeout = float(timeout_value)
-        except (ValueError, TypeError):
-            timeout = 60
-
-        response = requests.post(full_url, headers=final_headers, json=payload, timeout=timeout)
-
-        return jsonify({
-            "status": "request_sent",
-            "message": f"Request sent to {full_url}. The API responded.",
-            "status_code": response.status_code,
-            "response_headers": dict(response.headers),
-            "response_body": response.text,
-        })
-
-    except requests.exceptions.Timeout:
-        return jsonify({
-            "status": "failure",
-            "message": f"Connection to '{full_url}' timed out after {timeout} seconds. The server is not responding or a firewall is blocking the request."
-        }), 504
-    except requests.exceptions.ConnectionError as e:
-        return jsonify({
-            "status": "failure",
-            "message": f"Failed to establish a connection to '{full_url}'. Please check the hostname and port. Is the server running and publicly accessible?",
-            "error_details": str(e),
-        }), 503
-    except requests.exceptions.RequestException as e:
-        return jsonify({
-            "status": "failure",
-            "message": f"An unexpected request error occurred for '{full_url}'.",
-            "error_details": str(e),
-        }), 500
 
 
 if __name__ == '__main__':
