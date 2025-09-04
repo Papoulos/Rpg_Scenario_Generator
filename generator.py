@@ -136,6 +136,19 @@ def invoke_llm(llm, prompt, variables):
     A generic function to run a generation step using the non-streaming invoke() method.
     It returns the cleaned result as a string.
     """
+    # --- DEBUGGING STEP ---
+    # Check for missing variables before invoking the chain.
+    missing_vars = set(prompt.input_variables) - set(variables.keys())
+    if missing_vars:
+        debug_info = {
+            "error": "Missing variables detected before invoking LLM chain.",
+            "prompt_input_variables": sorted(list(prompt.input_variables)),
+            "variables_passed": sorted(list(variables.keys())),
+            "missing_variables": sorted(list(missing_vars))
+        }
+        # Returning a JSON string so it can be displayed to the user.
+        return json.dumps(debug_info, indent=2)
+
     chain = prompt | llm | StrOutputParser()
     response = chain.invoke(variables)
     cleaned_response = clean_llm_output(response)
@@ -283,19 +296,7 @@ def agent_2_detail_npc(llm, language, scenario_details, context):
     """
     synopsis = scenario_details
     npc_name = context.get('item_name', '') # The item to detail is passed in context
-
-    # --- DEBUGGING STEP ---
-    # Instead of calling the LLM, return the variables that would be used.
-    debug_info = {
-        "debug_step": "agent_2_detail_npc",
-        "prompt_used": "prompt_agent_2",
-        "variables_passed": {
-            "synopsis": synopsis,
-            "npc_name": npc_name,
-            "language": language
-        }
-    }
-    return json.dumps(debug_info, indent=2)
+    return invoke_llm(llm, prompt_agent_2, {"synopsis": synopsis, "npc_name": npc_name, "language": language})
 
 def agent_3_detail_location(llm, language, scenario_details, context):
     """
