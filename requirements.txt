@@ -11,5 +11,5 @@ langchain-openai
 langchain-mistralai
 requests
 json5
-crewai
+crewai==0.30.11
 crewai-tools
