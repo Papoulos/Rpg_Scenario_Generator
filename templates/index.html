@@ -59,7 +59,7 @@
                     </select>
 
                     <label for="llm_model">Language Model (LLM)</label>
-                    <select id="llm_model" name="llm_model">
+                    <select id="llm_model" name="model">
                         {% for model in models %}
                             <option value="{{ model }}" {% if model == 'gemini-flash' %}selected{% endif %}>{{ model }}</option>
                         {% endfor %}
