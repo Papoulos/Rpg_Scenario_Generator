@@ -60,7 +60,8 @@ def get_llm_instance(model_name: str):
         timeout = 60
 
     if service == "google":
-        return ChatGoogleGenerativeAI(model=config_model_name, google_api_key=api_key, timeout=timeout)
+        # The timeout parameter causes issues with the Google client, so it's removed for now.
+        return ChatGoogleGenerativeAI(model=config_model_name, google_api_key=api_key)
 
     elif service in ["openai", "openai_compatible"]:
         endpoint = provider_config.get("endpoint")
