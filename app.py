@@ -275,8 +275,6 @@ def download_pdf():
 @app.route('/v1/chat/completions', methods=['POST'])
 def chat_completions():
     # --- 1. Authentication ---
-    # A real app would have a robust API key check here.
-    # For this example, we just check for the presence of the header.
     api_key = request.headers.get("X-API-Key")
     if not api_key:
         return jsonify({"error": "X-API-Key header is missing"}), 401
@@ -288,54 +286,91 @@ def chat_completions():
 
     model = data.get("model")
     messages = data.get("messages")
+    stream = data.get("stream", False)
 
     if not model or not messages:
         return jsonify({"error": "Missing 'model' or 'messages' in request body"}), 400
 
-    # Check if the requested model is configured
     if not get_provider_config(model):
         return jsonify({"error": f"Model '{model}' is not configured or supported."}), 404
 
-    try:
-        # --- 3. Call the Chat Logic ---
-        ai_response_content = run_chat_completion(model_name=model, messages=messages)
+    # --- 3. Handle Streaming or Non-Streaming ---
+    if stream:
+        def generate_stream():
+            response_id = f"chatcmpl-{uuid.uuid4()}"
+            created_timestamp = int(time.time())
+            try:
+                content_stream = run_chat_completion(model_name=model, messages=messages, stream=True)
 
-        # --- 4. Format the Response (OpenAI-Compatible) ---
-        response_id = f"chatcmpl-{uuid.uuid4()}"
-        created_timestamp = int(time.time())
+                for chunk in content_stream:
+                    if chunk:  # Ensure not to send empty chunks
+                        chunk_data = {
+                            "id": response_id,
+                            "object": "chat.completion.chunk",
+                            "created": created_timestamp,
+                            "model": model,
+                            "choices": [{
+                                "index": 0,
+                                "delta": {"content": chunk},
+                                "finish_reason": None,
+                            }],
+                        }
+                        yield f"data: {json.dumps(chunk_data)}\n\n"
 
-        response = {
-            "id": response_id,
-            "object": "chat.completion",
-            "created": created_timestamp,
-            "model": model,
-            "choices": [
-                {
+                # Send the final chunk with finish_reason
+                final_chunk = {
+                    "id": response_id,
+                    "object": "chat.completion.chunk",
+                    "created": created_timestamp,
+                    "model": model,
+                    "choices": [{
+                        "index": 0,
+                        "delta": {},
+                        "finish_reason": "stop",
+                    }],
+                }
+                yield f"data: {json.dumps(final_chunk)}\n\n"
+                yield "data: [DONE]\n\n"
+
+            except Exception as e:
+                app.logger.error(f"An error occurred during streaming: {e}")
+                error_payload = {"error": {"message": str(e), "type": "stream_error"}}
+                yield f"data: {json.dumps(error_payload)}\n\n"
+
+        return Response(stream_with_context(generate_stream()), mimetype='text/event-stream')
+
+    else: # Non-streaming response
+        try:
+            ai_response_content = run_chat_completion(model_name=model, messages=messages, stream=False)
+            response_id = f"chatcmpl-{uuid.uuid4()}"
+            created_timestamp = int(time.time())
+
+            response = {
+                "id": response_id,
+                "object": "chat.completion",
+                "created": created_timestamp,
+                "model": model,
+                "choices": [{
                     "index": 0,
                     "message": {
                         "role": "assistant",
                         "content": ai_response_content,
                     },
                     "finish_reason": "stop",
-                }
-            ],
-            "usage": {
-                # Note: Token usage is not tracked by default in this simple setup.
-                # LangChain callbacks could be used for more advanced usage tracking.
-                "prompt_tokens": 0,
-                "completion_tokens": 0,
-                "total_tokens": 0,
-            },
-        }
-        return jsonify(response)
+                }],
+                "usage": {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0,
+                },
+            }
+            return jsonify(response)
 
-    except ValueError as e:
-        # Catches errors from chat.py (e.g., missing API key in .env, bad config)
-        return jsonify({"error": str(e)}), 400
-    except Exception as e:
-        # Catch-all for other unexpected errors
-        app.logger.error(f"An unexpected error occurred: {e}")
-        return jsonify({"error": "An internal server error occurred."}), 500
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+        except Exception as e:
+            app.logger.error(f"An unexpected error occurred: {e}")
+            return jsonify({"error": "An internal server error occurred."}), 500
 
 
 @app.route('/test-connection/<model_name>')
