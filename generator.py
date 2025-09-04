@@ -283,7 +283,19 @@ def agent_2_detail_npc(llm, language, scenario_details, context):
     """
     synopsis = scenario_details
     npc_name = context.get('item_name', '') # The item to detail is passed in context
-    return invoke_llm(llm, prompt_agent_2, {"synopsis": synopsis, "npc_name": npc_name, "language": language})
+
+    # --- DEBUGGING STEP ---
+    # Instead of calling the LLM, return the variables that would be used.
+    debug_info = {
+        "debug_step": "agent_2_detail_npc",
+        "prompt_used": "prompt_agent_2",
+        "variables_passed": {
+            "synopsis": synopsis,
+            "npc_name": npc_name,
+            "language": language
+        }
+    }
+    return json.dumps(debug_info, indent=2)
 
 def agent_3_detail_location(llm, language, scenario_details, context):
     """
