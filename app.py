@@ -14,14 +14,14 @@ load_dotenv()
 # Import the crew from our new configuration
 from config.crew import scenario_crew
 from llm_config import llm_providers
+from chat import get_llm_instance
 
 app = Flask(__name__)
 
 
 @app.route('/')
 def index():
-    # The user can still choose a model, though our crew is hardcoded to Gemini for now.
-    # This can be adapted later.
+    # The user can choose any model defined in the configuration.
     model_names = list(llm_providers.keys())
     return render_template('index.html', models=model_names)
 
@@ -34,22 +34,22 @@ def generate():
     if not data:
         return Response("Error: Invalid JSON payload.", status=400)
 
-    # --- Lazy LLM Initialization ---
-    # The LLM is initialized here, inside the request, to avoid
-    # the app crashing on startup if the API key is invalid.
+    # --- Dynamic LLM Initialization ---
+    # The LLM is initialized here based on the user's selection from the frontend.
+    # Default to a fallback model if no selection is provided.
+    selected_model = data.get('model', 'gemini-flash') # Default to gemini-flash
     try:
-        llm = ChatGoogleGenerativeAI(
-            model="gemini-1.5-flash",
-            verbose=True,
-            temperature=0.7,
-            google_api_key=os.getenv("GOOGLE_API_KEY")
-        )
+        llm = get_llm_instance(selected_model)
         # Assign the initialized LLM to each agent in the crew
         for agent in scenario_crew.agents:
             agent.llm = llm
+    except ValueError as e:
+        app.logger.error(f"LLM Initialization Error: {e}")
+        # Return a more specific error message to the user
+        return Response(f"Error: Could not initialize the Language Model. {e}", status=500)
     except Exception as e:
-        app.logger.error(f"Failed to initialize LLM: {e}")
-        return Response("Error: Could not initialize the Language Model. Please check your API key.", status=500)
+        app.logger.error(f"Failed to initialize LLM '{selected_model}': {e}")
+        return Response(f"Error: Could not initialize the Language Model '{selected_model}'. Please check your configuration and API keys.", status=500)
 
 
     # The new frontend will send all parameters at once.
