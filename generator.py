@@ -72,52 +72,40 @@ The final output must be in {language}.
 # --- AGENT 1: LIST NPCS AND LOCATIONS ---
 prompt_agent_1 = ChatPromptTemplate.from_template(
     """
-Role:
-You are a precision extraction engine for RPG world-building. Your sole function is to parse a narrative synopsis and output ONLY the raw lists of implied NPCs and locations.
+Role: You are a precision extraction engine for RPG world-building. Your sole function is to parse a narrative synopsis and output a structured JSON object.
 
-Input:
-- synopsis: {synopsis}  # The full scenario synopsis text
+**1. Input Analysis**
+You will receive a `synopsis` of a story. Your task is to identify and extract two types of entities: Non-Player Characters (NPCs) and Locations.
 
-Processing Rules:
-1. NPC Identification:
-   - Extract ALL named or strongly implied characters (including groups/archetypes)
-   - For unnamed but clearly present entities, use descriptive titles:
-     * "The blind librarian" (not "a blind librarian")
-     * "The storm's voice" (not "the storm")
-   - Exclude: generic terms ("villagers"), player characters, or purely metaphorical entities
+**2. Extraction Rules**
+- **NPCs**:
+  - Extract all named or strongly implied characters (e.g., "The King," "a mysterious merchant").
+  - Use descriptive titles for unnamed but distinct individuals (e.g., "The blind librarian," not "a librarian").
+  - Exclude generic groups ("villagers") and player characters.
+- **Locations**:
+  - Extract all named or clearly implied physical places (e.g., "The Whispering Forest," "the abandoned docks").
+  - Use descriptive titles for unnamed but distinct locations (e.g., "The floating market," not "a market").
+  - Exclude vague areas ("the wilderness").
 
-2. Location Identification:
-   - Extract ALL named or strongly implied physical spaces
-   - For unnamed but clearly present places, use descriptive titles:
-     * "The floating market" (not "a market")
-     * "The clocktower's hidden chamber"
-   - Exclude: vague areas ("the wilderness"), temporary spaces ("a battlefield")
+**3. Output Format**
+- You MUST output a single, valid JSON object and nothing else. No introductory text, no markdown, no comments.
+- The JSON object must have two keys: `"npcs"` and `"locations"`. These keys must always be in English.
+- The value for each key must be an array of strings.
+- If no entities are found for a category, the value must be an empty array `[]`.
+- Ensure there are no trailing commas in your JSON.
 
-3. Formatting:
-   - Names must be in title case (English) or proper case ({language})
-   - No descriptions, notes, or additional text
-   - No empty arrays - if none found, return empty list []
+**4. Examples**
+- **Example 1 (NPCs and Locations found)**:
+  `{{ "npcs": ["The Stormcaller", "Old Man Harkin"], "locations": ["The Weeping Spire", "The Bone Marshes"] }}`
+- **Example 2 (Only Locations found)**:
+  `{{ "npcs": [], "locations": ["The Abandoned Lighthouse"] }}`
 
-Output Requirements:
-- STRICT JSON format only (no markdown, no comments)
-- Keys MUST be "npcs" and "locations" (English, regardless of language)
-- Values MUST be arrays of strings
-- NO trailing commas or formatting errors
-- The final output must be in {language}.
+**5. Language**
+- The content of the output (the names of NPCs and locations) must be in the following language: {language}
 
-Example Outputs:
-
-- A valid JSON output looks like this: `{"npcs": ["The Stormcaller", "Old Man Harkin"], "locations": ["The Weeping Spire", "The Bone Marshes"]}`
-- If no NPCs are found, the JSON should look like this: `{"npcs": [], "locations": ["The Abandoned Lighthouse"]}`
-
-
-Strict Prohibitions:
-- NO descriptions or attributes
-- NO nested objects or additional fields
-- NO explanatory text or metadata
-- NO changes to the required JSON structure
+**Input Synopsis**:
+{synopsis}
 """
-
 )
 
 
@@ -136,19 +124,6 @@ def invoke_llm(llm, prompt, variables):
     A generic function to run a generation step using the non-streaming invoke() method.
     It returns the cleaned result as a string.
     """
-    # --- DEBUGGING STEP ---
-    # Check for missing variables before invoking the chain.
-    missing_vars = set(prompt.input_variables) - set(variables.keys())
-    if missing_vars:
-        debug_info = {
-            "error": "Missing variables detected before invoking LLM chain.",
-            "prompt_input_variables": sorted(list(prompt.input_variables)),
-            "variables_passed": sorted(list(variables.keys())),
-            "missing_variables": sorted(list(missing_vars))
-        }
-        # Returning a JSON string so it can be displayed to the user.
-        return json.dumps(debug_info, indent=2)
-
     chain = prompt | llm | StrOutputParser()
     response = chain.invoke(variables)
     cleaned_response = clean_llm_output(response)
