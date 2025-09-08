@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RPG Scenario Generator</title>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         body { font-family: sans-serif; margin: 2em; background-color: #f4f4f4; }
         .container { max-width: 1400px; margin: auto; background: white; padding: 2em; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
@@ -96,7 +95,7 @@
                     <h2>Generated Scenario</h2>
                     <div id="result-html"></div>
                     <form action="/download_pdf" method="post" id="pdf-form" style="display: none; margin-top: 1em;">
-                        <input type="hidden" name="markdown_content" id="markdown_content">
+                        <input type="hidden" name="html_content" id="html_content">
                         <button type="submit">Download as PDF</button>
                     </form>
                 </div>
@@ -110,7 +109,7 @@
         const resultContainer = document.getElementById('result-container');
         const resultHtml = document.getElementById('result-html');
         const pdfForm = document.getElementById('pdf-form');
-        const markdownContentInput = document.getElementById('markdown_content');
+        const htmlContentInput = document.getElementById('html_content');
         const submitButton = form.querySelector('button[type="submit"]');
 
         form.addEventListener('submit', async (event) => {
@@ -121,19 +120,15 @@
             submitButton.textContent = 'Génération en cours...';
             spinner.style.display = 'block';
             resultContainer.style.display = 'block';
+            pdfForm.style.display = 'none';
             resultHtml.innerHTML = ''; // Clear previous results
 
             // Gather form data
             const formData = new FormData(form);
             const inputs = Object.fromEntries(formData.entries());
-
-            // The user must select one of the initial hooks.
-            // For this refactoring, we'll just pretend the first hook is chosen.
-            // A future improvement would be to present the hooks to the user.
             inputs.accroche_selectionnee = "La première proposition générée par l'Idéateur.";
 
             try {
-                // Single API call to the new backend
                 const response = await fetch('/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -144,13 +139,21 @@
                     throw new Error(`Server error: ${response.status}. ${await response.text()}`);
                 }
 
-                const markdownResponse = await response.text();
+                // Process the streaming response
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
 
-                // Render the full markdown response
-                resultHtml.innerHTML = marked.parse(markdownResponse);
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) {
+                        break; // Exit loop when stream is finished
+                    }
+                    const chunk = decoder.decode(value, { stream: true });
+                    resultHtml.innerHTML += chunk;
+                }
 
-                // Populate the hidden form for PDF download
-                markdownContentInput.value = markdownResponse;
+                // Generation is complete
+                htmlContentInput.value = resultHtml.innerHTML;
                 pdfForm.style.display = 'block';
                 submitButton.textContent = 'Génération Terminée';
 
@@ -158,10 +161,10 @@
                 resultHtml.innerHTML = `<p style="color: red;"><strong>Error:</strong> ${error.message}</p>`;
                 console.error('Generation failed:', error);
                 submitButton.textContent = 'Erreur';
-                // Re-enable the button on error so the user can try again
-                submitButton.disabled = false;
             } finally {
                 spinner.style.display = 'none';
+                // Re-enable the button so the user can generate another scenario
+                submitButton.disabled = false;
             }
         });
     </script>

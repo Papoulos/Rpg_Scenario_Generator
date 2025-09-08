@@ -28,52 +28,48 @@ def index():
 @app.route('/generate', methods=['POST'])
 def generate():
     """
-    Handles the full scenario generation using the CrewAI crew.
+    Handles the scenario generation and streams the results back to the client.
     """
     data = request.get_json()
     if not data:
         return Response("Error: Invalid JSON payload.", status=400)
 
     # --- Dynamic LLM Initialization ---
-    # The LLM is initialized here based on the user's selection from the frontend.
-    # Default to a fallback model if no selection is provided.
-    selected_model = data.get('model', 'gemini-flash') # Default to gemini-flash
+    selected_model = data.get('model', 'gemini-flash')
     try:
         llm = get_llm_instance(selected_model)
-    except ValueError as e:
-        app.logger.error(f"LLM Initialization Error: {e}")
-        # Return a more specific error message to the user
-        return Response(f"Error: Could not initialize the Language Model. {e}", status=500)
     except Exception as e:
         app.logger.error(f"Failed to initialize LLM '{selected_model}': {e}")
-        return Response(f"Error: Could not initialize the Language Model '{selected_model}'. Please check your configuration and API keys.", status=500)
+        # Return a non-streaming error for initialization failures
+        return Response(f"Error: Could not initialize the Language Model '{selected_model}'. Check config and keys.", status=500)
 
-
-    # The new frontend will send all parameters at once.
-    # We'll need to adapt the frontend to send this structure.
-    # For now, we define them here. A placeholder for the selected hook is needed.
     inputs = {
         'theme': data.get('theme', 'Fantasy'),
         'motif': data.get('motif', 'Aventure'),
         'contraintes': data.get('contraintes', 'Pas de magie'),
-        'accroche_selectionnee': data.get('accroche_selectionnee', "L'accroche par défaut sera utilisée si aucune n'est fournie.")
+        'accroche_selectionnee': data.get('accroche_selectionnee', "L'accroche par défaut sera utilisée.")
     }
 
-    try:
-        # Kick off the generation process.
-        result = generate_scenario(
-            llm=llm,
-            theme=inputs['theme'],
-            motif=inputs['motif'],
-            contraintes=inputs['contraintes'],
-            accroche_selectionnee=inputs['accroche_selectionnee']
-        )
-        # The result is the output of the final task (compilation).
-        return Response(result, mimetype='text/plain')
+    def stream_response():
+        """Generator function to stream content."""
+        try:
+            # The generate_scenario function is now a generator, yielding HTML bricks
+            for html_brick in generate_scenario(
+                llm=llm,
+                theme=inputs['theme'],
+                motif=inputs['motif'],
+                contraintes=inputs['contraintes'],
+                accroche_selectionnee=inputs['accroche_selectionnee']
+            ):
+                yield html_brick
+        except Exception as e:
+            app.logger.error(f"An error occurred during scenario generation: {e}")
+            # Yield a final error message to be displayed on the frontend
+            error_html = f"<div style='color: red; padding: 1em; border: 1px solid red; margin-top: 1em;'><strong>Error during generation:</strong><br>{e}</div>"
+            yield error_html
 
-    except Exception as e:
-        app.logger.error(f"An unexpected error occurred during crew execution: {e}")
-        return Response("An internal server error occurred during generation.", status=500)
+    # Return a streaming response
+    return Response(stream_response(), mimetype='text/html')
 
 
 def slugify(text):
@@ -87,14 +83,12 @@ def slugify(text):
 
 @app.route('/download_pdf', methods=['POST'])
 def download_pdf():
-    markdown_content = request.form.get('markdown_content')
-    if not markdown_content:
+    # The form will now send the full innerHTML of the result div.
+    html_content = request.form.get('html_content')
+    if not html_content:
         return "Error: Content not found.", 400
 
-    # --- 1. Convert Markdown to initial HTML ---
-    html_content = markdown2.markdown(markdown_content, extras=["fenced-code-blocks", "tables", "header-ids"])
-
-    # --- 2. Process HTML with BeautifulSoup to build TOC and structure content ---
+    # The content is already HTML, so we just parse it.
     soup = BeautifulSoup(html_content, 'html.parser')
 
     # Extract title and synopsis for the cover page
