@@ -43,24 +43,12 @@ def generate():
         # Return a non-streaming error for initialization failures
         return Response(f"Error: Could not initialize the Language Model '{selected_model}'. Check config and keys.", status=500)
 
-    inputs = {
-        'theme': data.get('theme', 'Fantasy'),
-        'motif': data.get('motif', 'Aventure'),
-        'contraintes': data.get('contraintes', 'Pas de magie'),
-        'accroche_selectionnee': data.get('accroche_selectionnee', "L'accroche par défaut sera utilisée.")
-    }
-
     def stream_response():
         """Generator function to stream content."""
         try:
-            # The generate_scenario function is now a generator, yielding HTML bricks
-            for html_brick in generate_scenario(
-                llm=llm,
-                theme=inputs['theme'],
-                motif=inputs['motif'],
-                contraintes=inputs['contraintes'],
-                accroche_selectionnee=inputs['accroche_selectionnee']
-            ):
+            # Pass the entire data payload from the form to the generator.
+            # The generator function is now responsible for handling the inputs.
+            for html_brick in generate_scenario(llm=llm, inputs=data):
                 yield html_brick
         except Exception as e:
             app.logger.error(f"An error occurred during scenario generation: {e}")
@@ -91,25 +79,13 @@ def download_pdf():
     # The content is already HTML, so we just parse it.
     soup = BeautifulSoup(html_content, 'html.parser')
 
-    # Extract title and synopsis for the cover page
+    # Extract title for the cover page
     title_tag = soup.find('h1')
     title_text = title_tag.get_text() if title_tag else 'Scenario'
     if title_tag:
-        title_tag.decompose() # Remove title from main content
+        title_tag.decompose() # Remove title from main content so it's not duplicated
 
-    synopsis_tag = soup.find('h2', string='Synopsis')
-    synopsis_html = ''
-    if synopsis_tag:
-        # Capture the synopsis content until the next h2
-        content_after_synopsis = []
-        for sibling in synopsis_tag.find_next_siblings():
-            if sibling.name == 'h2':
-                break
-            content_after_synopsis.append(str(sibling))
-        synopsis_html = ''.join(content_after_synopsis)
-        synopsis_tag.decompose() # Remove synopsis from main content for now
-
-    # Add page-break class to all top-level sections
+    # Add page-break class to all top-level sections for better PDF layout
     for h2 in soup.find_all('h2'):
         h2['class'] = 'new-page'
 
