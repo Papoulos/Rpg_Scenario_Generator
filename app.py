@@ -21,11 +21,13 @@ from chat import get_llm_instance
 app = Flask(__name__)
 
 
+import string
+
 def validate_and_sanitize_inputs(data):
     """
     Validates and sanitizes user inputs for security and content moderation.
     - Sanitizes against XSS by escaping HTML.
-    - Checks for profanity.
+    - Checks for profanity and returns the specific words found.
     - Raises a ValueError if validation fails.
 
     Note on SQL Injection: This function does not protect against SQL injection.
@@ -39,11 +41,11 @@ def validate_and_sanitize_inputs(data):
     for key, value in data.items():
         if isinstance(value, str):
             # Content moderation check must happen BEFORE sanitization
-            if profanity.contains_profanity(value):
-                raise ValueError(f"Inappropriate language detected in field: {key}")
+            profane_words = {word.strip(string.punctuation) for word in value.split() if profanity.contains_profanity(word.strip(string.punctuation))}
+            if profane_words:
+                raise ValueError(f"Inappropriate language detected in field '{key}'. The following word(s) are not allowed: {', '.join(profane_words)}")
 
             # Sanitize to prevent XSS by escaping HTML special characters.
-            # This is the correct way to handle user input that might be rendered in HTML.
             sanitized_value = html.escape(value)
             sanitized_data[key] = sanitized_value
         else:
