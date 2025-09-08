@@ -67,16 +67,33 @@ def generate_scenario(llm, theme, motif, contraintes, accroche_selectionnee):
 
     def _run_task(agent_name, task_description, **kwargs):
         agent = agents[agent_name]
-        prompt = f"""
-        **Role**: {agent['role']}
-        **Goal**: {agent['goal']}
-        **Backstory**: {agent['backstory']}
 
-        **Tâche**:
-        {task_description}
-        """
-        chain = _create_chain(llm, prompt)
-        return chain.invoke(kwargs)
+    # Dynamically build the context string with placeholders for each kwarg.
+    # This creates a string like:
+    # **Theme Fourni(e)**:
+    # {theme}
+    #
+    # **Motif Fourni(e)**:
+    # {motif}
+    context_inputs = "\n\n".join([f"**{key.capitalize()} Fourni(e)**:\n{{{key}}}" for key in kwargs])
+
+    # Construct the full prompt template.
+    prompt_template = f"""
+**Role**: {agent['role']}
+**Goal**: {agent['goal']}
+**Backstory**: {agent['backstory']}
+
+**Contexte de la Tâche**:
+{context_inputs}
+
+    **Tâche à réaliser**:
+{task_description}
+"""
+    # Create the chain with the dynamic prompt template.
+    chain = _create_chain(llm, prompt_template)
+
+    # Invoke the chain, passing the kwargs dictionary for the template to populate its placeholders.
+    return chain.invoke(kwargs)
 
     # Task 1: Generate initial ideas
     task_ideation_output = _run_task(
