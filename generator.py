@@ -1,4 +1,5 @@
 import markdown2
+import html
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
@@ -92,9 +93,29 @@ def generate_scenario(llm, inputs):
         chain = _create_chain(llm, prompt_template)
         return chain.invoke(clean_kwargs)
 
+    # --- Input Summary ---
+    input_descriptions = {
+        "game_system": ("Système de jeu", "Le système de règles qui sera utilisé."),
+        "player_count": ("Nombre de joueurs", "Le nombre de joueurs prévu pour le scénario."),
+        "theme_tone": ("Thème et Ton", "L'ambiance générale et le style du scénario."),
+        "core_idea": ("Idée de base", "Le concept central ou le point de départ de l'histoire."),
+        "constraints": ("Contraintes", "Les contraintes spécifiques à respecter (ex: durée, type de personnages)."),
+        "key_elements": ("Éléments clés à inclure", "Les éléments qui doivent absolument apparaître dans le scénario."),
+        "elements_to_avoid": ("Éléments à éviter", "Les sujets ou éléments à ne pas inclure.")
+    }
+
+    summary_table_html = "<h2>Récapitulatif de vos choix</h2>"
+    summary_table_html += "<table><thead><tr><th>Paramètre</th><th>Description</th><th>Votre Choix</th></tr></thead><tbody>"
+    for key, (name, desc) in input_descriptions.items():
+        value = user_context.get(key, "Non spécifié")
+        value_escaped = html.escape(str(value))
+        summary_table_html += f"<tr><td><strong>{name}</strong></td><td>{desc}</td><td>{value_escaped}</td></tr>"
+    summary_table_html += "</tbody></table>"
+
     # --- Step 1: Generate Title ---
     title_text = user_context['core_idea'] if user_context['core_idea'] not in ["Non spécifié", "N/A", ""] else "Scénario d'Aventure"
     yield f"<h1>{title_text}</h1>"
+    yield summary_table_html
 
     # Task 1: Generate initial ideas
     task_ideation_output = _run_task(
@@ -145,21 +166,20 @@ def generate_scenario(llm, inputs):
     )
     yield f"<h2>Découpage des Scènes</h2>{markdown2.markdown(task_decoupage_scenes_output, extras=markdown_options)}"
 
-    # Task 6: First Coherence Check
-    task_verification_1_output = _run_task(
-        "verificateur",
-        "Vérifie la cohérence entre le synopsis et le découpage en scènes. Assure-toi que les scènes proposées couvrent bien l'ensemble du synopsis. Si des incohérences sont trouvées, fournis des suggestions claires. Sinon, valide la cohérence.",
-        synopsis=task_synopsis_output,
-        scenes=task_decoupage_scenes_output
-    )
-    yield f"<h2>Vérification de Cohérence</h2>{markdown2.markdown(task_verification_1_output, extras=markdown_options)}"
+    # Task 6: First Coherence Check (REMOVED)
+    # task_verification_1_output = _run_task(
+    #     "verificateur",
+    #     "Vérifie la cohérence entre le synopsis et le découpage en scènes. Assure-toi que les scènes proposées couvrent bien l'ensemble du synopsis. Si des incohérences sont trouvées, fournis des suggestions claires. Sinon, valide la cohérence.",
+    #     synopsis=task_synopsis_output,
+    #     scenes=task_decoupage_scenes_output
+    # )
+    # yield f"<h2>Vérification de Cohérence</h2>{markdown2.markdown(task_verification_1_output, extras=markdown_options)}"
 
     # Task 7: Detail all scenes
     task_detail_scenes_output = _run_task(
         "specialiste_scene",
         "Pour CHAQUE scène listée dans le découpage, écris une description détaillée (objectif, obstacles, ambiance, issues possibles).",
-        decoupage_scenes=task_decoupage_scenes_output,
-        rapport_coherence=task_verification_1_output
+        decoupage_scenes=task_decoupage_scenes_output
     )
     yield f"<h2>Scènes Détaillées</h2>{markdown2.markdown(task_detail_scenes_output, extras=markdown_options)}"
 
