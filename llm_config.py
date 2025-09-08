@@ -26,7 +26,7 @@ llm_providers = {
     # --- Pre-configured Public LLMs ---
     "gemini-flash": {
         "service": "google",
-        "model_name": "gemini-1.5-flash",
+        "model_name": "gemini-1.5-flash-latest",
         "api_key_name": "google",
         "system_prompt": "You are a helpful assistant powered by Google Gemini.",
         "timeout": 60,
