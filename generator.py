@@ -120,65 +120,65 @@ def generate_scenario(llm, inputs):
     # Task 1: Generate initial ideas
     task_ideation_output = _run_task(
         "ideateur",
-        "Génère 2 à 3 accroches de scénario distinctes et percutantes basées sur le contexte fourni. Chaque accroche doit être un court paragraphe intriguant. Donne uniquement la liste des accroches, sans ajout, commentaire ou introduction.",
+        "Génère 2 à 3 accroches de scénario distinctes et percutantes basées sur le contexte fourni. Chaque accroche doit être un court paragraphe intrigant. Commence directement par la première accroche, sans phrase d'introduction.",
         **user_context
     )
     yield f"<h2>Accroches Initiales</h2>{markdown2.markdown(task_ideation_output, extras=markdown_options)}"
     hooks = [hook.strip() for hook in task_ideation_output.split('\n\n') if hook.strip()]
-    accroche_selectionnee = hooks if hooks else task_ideation_output
-    
+    accroche_selectionnee = hooks[0] if hooks else task_ideation_output
+    # Task 2: Create the Antagonist
     task_antagoniste_output = _run_task(
         "stratege",
-        "En te basant sur l'accroche sélectionnée et le contexte utilisateur, rédige strictement la fiche descriptive de l'antagoniste principal (motivations, méthodes, etc.), sans aucun commentaire ou explication.",
+        "En te basant sur l'accroche sélectionnée et le contexte général fourni par l'utilisateur, développe l'antagoniste principal. Crée une fiche descriptive complète pour cet antagoniste (motivations, méthodes, etc.).",
         **user_context,
         accroche_selectionnee=accroche_selectionnee
     )
     yield f"<h2>Antagoniste</h2>{markdown2.markdown(task_antagoniste_output, extras=markdown_options)}"
-    
+    # Task 3: Build the World Context
     task_contexte_output = _run_task(
         "contextualisateur",
-        "À partir de l'accroche, de l'antagoniste et du contexte utilisateur, décris uniquement l'environnement, le climat social/politique et les causes du déclenchement de l'intrigue. Aucun commentaire, préambule ou explication n'est attendu.",
+        "À partir de l'accroche, de l'antagoniste et du contexte utilisateur, construis le contexte du monde. Décris l'environnement, le climat social/politique, et les raisons pour lesquelles l'intrigue se déclenche maintenant.",
         **user_context,
         accroche=accroche_selectionnee,
         antagoniste=task_antagoniste_output
     )
     yield f"<h2>Contexte du Monde</h2>{markdown2.markdown(task_contexte_output, extras=markdown_options)}"
-    
+    # Task 4: Write the Synopsis
     task_synopsis_output = _run_task(
         "dramaturge",
-        "Synthétise toutes les informations pour écrire un synopsis global de l'histoire (300-400 mots) avec début, milieu et fin clairs. Donne uniquement ce texte, sans phrase supplémentaire ni commentaire.",
+        "Synthétise toutes les informations (contexte utilisateur, accroche, antagoniste, contexte du monde) pour écrire un synopsis global de l'histoire (300-400 mots) avec un début, un milieu et une fin clairs.",
         **user_context,
         accroche=accroche_selectionnee,
         antagoniste=task_antagoniste_output,
         contexte_monde=task_contexte_output
     )
     yield f"<h2>Synopsis</h2>{markdown2.markdown(task_synopsis_output, extras=markdown_options)}"
-    
+    # Task 5: Outline the Scenes
     task_decoupage_scenes_output = _run_task(
         "metteur_en_scene",
-        "À partir du synopsis, donne uniquement la liste des scènes clés, chacune avec un titre descriptif. La liste doit suivre une progression logique, sans aucun commentaire ou introduction.",
+        "En te basant sur le synopsis, découpe l'histoire en une liste de scènes clés. Pour chaque scène, donne un titre court et descriptif. La liste doit suivre une progression logique.",
         synopsis=task_synopsis_output
     )
     yield f"<h2>Découpage des Scènes</h2>{markdown2.markdown(task_decoupage_scenes_output, extras=markdown_options)}"
-      
+    # Task 7: Detail all scenes
     task_detail_scenes_output = _run_task(
         "specialiste_scene",
-        "Pour chaque scène du découpage, écris uniquement une description détaillée (objectif, obstacles, ambiance, issues possibles) sans autre texte, explication ou remarque.",
+        "Pour CHAQUE scène listée dans le découpage, écris une description détaillée (objectif, obstacles, ambiance, issues possibles).",
         decoupage_scenes=task_decoupage_scenes_output
     )
     yield f"<h2>Scènes Détaillées</h2>{markdown2.markdown(task_detail_scenes_output, extras=markdown_options)}"
-    
+    # Task 8: Create NPCs
     task_architecte_pnj_output = _run_task(
         "architecte_pnj",
-        "Identifie 3 à 5 PNJ majeurs en te basant sur le synopsis et les scènes détaillées, puis donne uniquement la fiche descriptive de chacun, sans commentaire ou explication.",
+        "En te basant sur le synopsis et les scènes détaillées, identifie 3 à 5 PNJ majeurs et crée une fiche descriptive pour chacun.",
         synopsis=task_synopsis_output,
         scenes_detaillees=task_detail_scenes_output
     )
     yield f"<h2>Personnages Non-Joueurs (PNJ)</h2>{markdown2.markdown(task_architecte_pnj_output, extras=markdown_options)}"
-    
+    # Task 9: Create Locations
     task_architecte_lieux_output = _run_task(
         "architecte_lieux",
-        "Liste 3 à 5 lieux importants en te basant sur le synopsis et les scènes détaillées. Pour chaque lieu, fournis uniquement une description détaillée, sans phrase ajoutée.",
+        "En te basant sur le synopsis et les scènes détaillées, identifie 3 à 5 lieux importants et écris une description détaillée pour chacun.",
         synopsis=task_synopsis_output,
         scenes_detaillees=task_detail_scenes_output
     )
