@@ -111,7 +111,7 @@ def generate_scenario(llm, inputs):
     task_antagoniste_output = _run_task(
         "stratege",
         "En te basant sur l'accroche sélectionnée et le contexte général fourni par l'utilisateur, développe l'antagoniste principal. Crée une fiche descriptive complète pour cet antagoniste (motivations, méthodes, etc.).",
-        contexte_utilisateur=str(user_context),
+        **user_context,
         accroche_selectionnee=accroche_selectionnee
     )
     yield f"<h2>Antagoniste</h2>{markdown2.markdown(task_antagoniste_output, extras=markdown_options)}"
@@ -120,7 +120,7 @@ def generate_scenario(llm, inputs):
     task_contexte_output = _run_task(
         "contextualisateur",
         "À partir de l'accroche, de l'antagoniste et du contexte utilisateur, construis le contexte du monde. Décris l'environnement, le climat social/politique, et les raisons pour lesquelles l'intrigue se déclenche maintenant.",
-        contexte_utilisateur=str(user_context),
+        **user_context,
         accroche=accroche_selectionnee,
         antagoniste=task_antagoniste_output
     )
@@ -130,7 +130,7 @@ def generate_scenario(llm, inputs):
     task_synopsis_output = _run_task(
         "dramaturge",
         "Synthétise toutes les informations (contexte utilisateur, accroche, antagoniste, contexte du monde) pour écrire un synopsis global de l'histoire (300-400 mots) avec un début, un milieu et une fin clairs.",
-        contexte_utilisateur=str(user_context),
+        **user_context,
         accroche=accroche_selectionnee,
         antagoniste=task_antagoniste_output,
         contexte_monde=task_contexte_output
