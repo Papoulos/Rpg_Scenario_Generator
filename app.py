@@ -27,7 +27,7 @@ def validate_and_sanitize_inputs(data):
     """
     Validates and sanitizes user inputs for security and content moderation.
     - Sanitizes against XSS by escaping HTML.
-    - Checks for profanity and returns the specific words found.
+    - Checks for profanity (English only) and returns the specific words found.
     - Raises a ValueError if validation fails.
 
     Note on SQL Injection: This function does not protect against SQL injection.
@@ -36,14 +36,16 @@ def validate_and_sanitize_inputs(data):
     """
     # Load custom profanity words if available
     # profanity.load_censor_words_from_file('./profanity_wordlist.json')
+    language = data.get('language', 'English') # Default to English
 
     sanitized_data = {}
     for key, value in data.items():
         if isinstance(value, str):
-            # Content moderation check must happen BEFORE sanitization
-            profane_words = {word.strip(string.punctuation) for word in value.split() if profanity.contains_profanity(word.strip(string.punctuation))}
-            if profane_words:
-                raise ValueError(f"Inappropriate language detected in field '{key}'. The following word(s) are not allowed: {', '.join(profane_words)}")
+            # Content moderation is applied only for English to avoid false positives in other languages.
+            if language == 'English':
+                profane_words = {word.strip(string.punctuation) for word in value.split() if profanity.contains_profanity(word.strip(string.punctuation))}
+                if profane_words:
+                    raise ValueError(f"Inappropriate language detected in field '{key}'. The following word(s) are not allowed: {', '.join(profane_words)}")
 
             # Sanitize to prevent XSS by escaping HTML special characters.
             sanitized_value = html.escape(value)
