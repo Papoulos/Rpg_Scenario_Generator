@@ -7,6 +7,8 @@ from bs4 import BeautifulSoup
 from flask import Flask, render_template, request, Response, jsonify
 import requests
 from weasyprint import HTML
+import html
+from better_profanity import profanity
 
 # Load environment variables from .env file
 load_dotenv()
@@ -17,6 +19,38 @@ from llm_config import llm_providers
 from chat import get_llm_instance
 
 app = Flask(__name__)
+
+
+def validate_and_sanitize_inputs(data):
+    """
+    Validates and sanitizes user inputs for security and content moderation.
+    - Sanitizes against XSS by escaping HTML.
+    - Checks for profanity.
+    - Raises a ValueError if validation fails.
+
+    Note on SQL Injection: This function does not protect against SQL injection.
+    The application does not appear to use a SQL database directly. If it did,
+    protection would require using parameterized queries or an ORM, not input sanitization alone.
+    """
+    # Load custom profanity words if available
+    # profanity.load_censor_words_from_file('./profanity_wordlist.json')
+
+    sanitized_data = {}
+    for key, value in data.items():
+        if isinstance(value, str):
+            # Content moderation check must happen BEFORE sanitization
+            if profanity.contains_profanity(value):
+                raise ValueError(f"Inappropriate language detected in field: {key}")
+
+            # Sanitize to prevent XSS by escaping HTML special characters.
+            # This is the correct way to handle user input that might be rendered in HTML.
+            sanitized_value = html.escape(value)
+            sanitized_data[key] = sanitized_value
+        else:
+            # Keep non-string values as they are
+            sanitized_data[key] = value
+
+    return sanitized_data
 
 
 @app.route('/')
@@ -33,6 +67,13 @@ def generate():
     data = request.get_json()
     if not data:
         return Response("Error: Invalid JSON payload.", status=400)
+
+    try:
+        data = validate_and_sanitize_inputs(data)
+    except ValueError as e:
+        # Return a clear error to the user
+        return Response(f"<div style='color: red; padding: 1em; border: 1px solid red;'><strong>Validation Error:</strong><br>{e}</div>", status=400)
+
 
     # --- Dynamic LLM Initialization ---
     selected_model = data.get('model', 'gemini-flash')
