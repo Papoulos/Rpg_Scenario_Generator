@@ -164,8 +164,7 @@ def generate_scenario(llm, inputs):
     task_detail_scenes_output = _run_task(
         "specialiste_scene",
         "Pour chaque scène du découpage, écris uniquement une description détaillée (objectif, obstacles, ambiance, issues possibles) sans autre texte, explication ou remarque.",
-        decoupage_scenes=task_decoupage_scenes_output,
-        rapport_coherence=task_verification_1_output
+        decoupage_scenes=task_decoupage_scenes_output
     )
     yield f"<h2>Scènes Détaillées</h2>{markdown2.markdown(task_detail_scenes_output, extras=markdown_options)}"
     
