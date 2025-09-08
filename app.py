@@ -12,7 +12,7 @@ from weasyprint import HTML
 load_dotenv()
 
 # Import the crew from our new configuration
-from config.crew import scenario_crew
+from generator import generate_scenario
 from llm_config import llm_providers
 from chat import get_llm_instance
 
@@ -40,9 +40,6 @@ def generate():
     selected_model = data.get('model', 'gemini-flash') # Default to gemini-flash
     try:
         llm = get_llm_instance(selected_model)
-        # Assign the initialized LLM to each agent in the crew
-        for agent in scenario_crew.agents:
-            agent.llm = llm
     except ValueError as e:
         app.logger.error(f"LLM Initialization Error: {e}")
         # Return a more specific error message to the user
@@ -63,10 +60,14 @@ def generate():
     }
 
     try:
-        # Kick off the crew's process.
-        # This is a blocking call that will run all defined tasks.
-        result = scenario_crew.kickoff(inputs=inputs)
-
+        # Kick off the generation process.
+        result = generate_scenario(
+            llm=llm,
+            theme=inputs['theme'],
+            motif=inputs['motif'],
+            contraintes=inputs['contraintes'],
+            accroche_selectionnee=inputs['accroche_selectionnee']
+        )
         # The result is the output of the final task (compilation).
         return Response(result, mimetype='text/plain')
 
