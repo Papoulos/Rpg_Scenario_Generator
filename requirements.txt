@@ -11,3 +11,4 @@ langchain-openai
 langchain-mistralai
 requests
 json5
+better-profanity
