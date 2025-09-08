@@ -80,7 +80,7 @@ def generate_scenario(llm, theme, motif, contraintes, accroche_selectionnee):
             "role": "Spécialiste de Scène",
             "goal": (
                 "Développer une scène précise du squelette narratif en une situation prête à jouer. "
-                "Décrire son ouverture, ses obstacles détaillés, les PNJ impliqués et les actions possibles pour les PJ. "
+                "Décrire son ouverture, ses étapes détaillés avec les obstacles associées, les PNJ impliqués et les actions possibles pour les PJ. "
                 "Apporter une ambiance forte et sensorielle."
             ),
             "backstory": (
