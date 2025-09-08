@@ -1,3 +1,4 @@
+import markdown2
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
@@ -8,10 +9,11 @@ def _create_chain(llm, prompt_template):
 
 def generate_scenario(llm, theme, motif, contraintes, accroche_selectionnee):
     """
-    Generates a scenario using a series of Langchain chains.
+    Generates a scenario by yielding each step as an HTML brick.
     """
+    markdown_options = ["fenced-code-blocks", "tables", "header-ids"]
 
-    # Agent definitions (prompts)
+    # Agent definitions (prompts) - "compilateur_final" is removed.
     agents = {
         "ideateur": {
             "role": "Idéateur de Concept",
@@ -121,49 +123,26 @@ def generate_scenario(llm, theme, motif, contraintes, accroche_selectionnee):
                 "Ton rôle est de repérer les failles et de sécuriser la solidité du scénario avant les étapes suivantes."
             ),
         },
-        "compilateur_final": {
-            "role": "Compilateur de Scénario",
-            "goal": (
-                "Assembler tous les éléments validés (synopsis, personnages, lieux, scènes) en un document final structuré, clair et lisible. "
-                "Produire un livret Markdown prêt à être utilisé directement par un Meneur de Jeu."
-            ),
-            "backstory": (
-                "Tu es l’archiviste et l’éditeur final du projet. "
-                "Tu prends les morceaux créatifs et tu en fais un objet complet, lisible et exploitable."
-            ),
-        }
     }
 
 
     def _run_task(agent_name, task_description, **kwargs):
         agent = agents[agent_name]
-
-        # Dynamically build the context string with placeholders for each kwarg.
-        # This creates a string like:
-        # **Theme Fourni(e)**:
-        # {theme}
-        #
-        # **Motif Fourni(e)**:
-        # {motif}
         context_inputs = "\n\n".join([f"**{key.capitalize()} Fourni(e)**:\n{{{key}}}" for key in kwargs])
-
-        # Construct the full prompt template.
         prompt_template = f"""
 **Role**: {agent['role']}
 **Goal**: {agent['goal']}
 **Backstory**: {agent['backstory']}
-
 **Contexte de la Tâche**:
 {context_inputs}
-
         **Tâche à réaliser**:
 {task_description}
 """
-        # Create the chain with the dynamic prompt template.
         chain = _create_chain(llm, prompt_template)
-
-        # Invoke the chain, passing the kwargs dictionary for the template to populate its placeholders.
         return chain.invoke(kwargs)
+
+    # --- Step 1: Generate Title ---
+    yield f"<h1>Scénario: {theme} - {motif}</h1>"
 
     # Task 1: Generate initial ideas
     task_ideation_output = _run_task(
@@ -171,15 +150,11 @@ def generate_scenario(llm, theme, motif, contraintes, accroche_selectionnee):
         "Basé sur le thème, le motif et les contraintes fournis par l'utilisateur, "
         "génère 2 à 3 accroches de scénario distinctes et percutantes. "
         "Chaque accroche doit être un court paragraphe intrigant.",
-        theme=theme,
-        motif=motif,
-        contraintes=contraintes
+        theme=theme, motif=motif, contraintes=contraintes
     )
-
     # For now, we will just use the first generated hook.
-    # In a more advanced implementation, we could let the user choose.
     accroche_selectionnee = task_ideation_output.split('\n\n')[0]
-
+    yield f"<h2>Accroche Sélectionnée</h2>{markdown2.markdown(accroche_selectionnee, extras=markdown_options)}"
 
     # Task 2: Create the Antagonist
     task_antagoniste_output = _run_task(
@@ -188,25 +163,25 @@ def generate_scenario(llm, theme, motif, contraintes, accroche_selectionnee):
         "Crée une fiche descriptive complète pour cet antagoniste.",
         accroche_selectionnee=accroche_selectionnee
     )
+    yield f"<h2>Antagoniste</h2>{markdown2.markdown(task_antagoniste_output, extras=markdown_options)}"
 
     # Task 3: Build the World Context
     task_contexte_output = _run_task(
         "contextualisateur",
         "À partir de l'accroche et de la description de l'antagoniste, construis le contexte du monde. "
         "Décris l'environnement, le climat social/politique, et les raisons pour lesquelles l'intrigue se déclenche maintenant.",
-        accroche=accroche_selectionnee,
-        antagoniste=task_antagoniste_output
+        accroche=accroche_selectionnee, antagoniste=task_antagoniste_output
     )
+    yield f"<h2>Contexte du Monde</h2>{markdown2.markdown(task_contexte_output, extras=markdown_options)}"
 
     # Task 4: Write the Synopsis
     task_synopsis_output = _run_task(
         "dramaturge",
         "Synthétise l'accroche, l'antagoniste et le contexte pour écrire un synopsis global de l'histoire. "
         "Le synopsis doit avoir un début, un milieu et une fin clairs, et doit faire entre 300 et 400 mots.",
-        accroche=accroche_selectionnee,
-        antagoniste=task_antagoniste_output,
-        contexte=task_contexte_output
+        accroche=accroche_selectionnee, antagoniste=task_antagoniste_output, contexte=task_contexte_output
     )
+    yield f"<h2>Synopsis</h2>{markdown2.markdown(task_synopsis_output, extras=markdown_options)}"
 
     # Task 5: Outline the Scenes
     task_decoupage_scenes_output = _run_task(
@@ -215,6 +190,7 @@ def generate_scenario(llm, theme, motif, contraintes, accroche_selectionnee):
         "Pour chaque scène, donne un titre court et descriptif. La liste doit suivre une progression logique et créer une montée en tension.",
         synopsis=task_synopsis_output
     )
+    yield f"<h2>Découpage des Scènes</h2>{markdown2.markdown(task_decoupage_scenes_output, extras=markdown_options)}"
 
     # Task 6: First Coherence Check
     task_verification_1_output = _run_task(
@@ -222,9 +198,9 @@ def generate_scenario(llm, theme, motif, contraintes, accroche_selectionnee):
         "Vérifie la cohérence entre le synopsis et le découpage en scènes. "
         "Assure-toi que les scènes proposées couvrent bien l'ensemble du synopsis et que leur enchaînement est logique. "
         "Si des incohérences sont trouvées, fournis des suggestions claires pour les corriger. Sinon, valide la cohérence.",
-        synopsis=task_synopsis_output,
-        scenes=task_decoupage_scenes_output
+        synopsis=task_synopsis_output, scenes=task_decoupage_scenes_output
     )
+    yield f"<h2>Vérification de Cohérence</h2>{markdown2.markdown(task_verification_1_output, extras=markdown_options)}"
 
     # Task 7: Detail all scenes
     task_detail_scenes_output = _run_task(
@@ -233,41 +209,24 @@ def generate_scenario(llm, theme, motif, contraintes, accroche_selectionnee):
         "Chaque description de scène doit inclure : son objectif narratif, les obstacles potentiels pour les joueurs, "
         "l'ambiance générale, et les issues possibles. "
         "Assure-toi de traiter toutes les scènes de la liste.",
-        decoupage_scenes=task_decoupage_scenes_output,
-        coherence_report=task_verification_1_output
+        decoupage_scenes=task_decoupage_scenes_output, coherence_report=task_verification_1_output
     )
+    yield f"<h2>Scènes Détaillées</h2>{markdown2.markdown(task_detail_scenes_output, extras=markdown_options)}"
 
     # Task 8: Create NPCs
     task_architecte_pnj_output = _run_task(
         "architecte_pnj",
         "En te basant sur le synopsis et les scènes détaillées, identifie 3 à 5 PNJ (Personnages Non-Joueurs) majeurs. "
         "Pour chaque PNJ, crée une fiche descriptive.",
-        synopsis=task_synopsis_output,
-        scenes_detaillees=task_detail_scenes_output
+        synopsis=task_synopsis_output, scenes_detaillees=task_detail_scenes_output
     )
+    yield f"<h2>Personnages Non-Joueurs (PNJ)</h2>{markdown2.markdown(task_architecte_pnj_output, extras=markdown_options)}"
 
     # Task 9: Create Locations
     task_architecte_lieux_output = _run_task(
         "architecte_lieux",
         "En te basant sur le synopsis et les scènes détaillées, identifie 3 à 5 lieux importants. "
         "Pour chaque lieu, écris une description détaillée.",
-        synopsis=task_synopsis_output,
-        scenes_detaillees=task_detail_scenes_output
+        synopsis=task_synopsis_output, scenes_detaillees=task_detail_scenes_output
     )
-
-    # Task 10: Final Compilation
-    final_compilation_output = _run_task(
-        "compilateur_final",
-        "Rassemble TOUS les éléments créés précédemment : le titre, le synopsis, les fiches de PNJ, "
-        "les descriptions de lieux et les scènes détaillées. "
-        "Organise toutes ces informations en un seul et unique document Markdown. "
-        "Le document doit être parfaitement structuré avec des titres et des sous-titres clairs pour chaque section. "
-        "C'est le document final qui sera présenté à l'utilisateur.",
-        titre=f"Scénario: {theme} - {motif}",
-        synopsis=task_synopsis_output,
-        pnjs=task_architecte_pnj_output,
-        lieux=task_architecte_lieux_output,
-        scenes=task_detail_scenes_output
-    )
-
-    return final_compilation_output
+    yield f"<h2>Lieux Importants</h2>{markdown2.markdown(task_architecte_lieux_output, extras=markdown_options)}"
