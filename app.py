@@ -1,6 +1,7 @@
 import markdown2
 import re
 import os
+import copy
 from dotenv import load_dotenv
 print("--- App execution started ---", flush=True)
 from bs4 import BeautifulSoup
@@ -163,7 +164,7 @@ def download_pdf():
         if title in sections:
             # Append a copy of each element to the new soup
             for element in sections[title]:
-                ordered_soup_div.append(element.copy())
+                ordered_soup_div.append(copy.copy(element))
 
     # Add page-break class to all top-level sections for better PDF layout
     for h2 in ordered_soup_div.find_all('h2'):
