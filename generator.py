@@ -163,7 +163,7 @@ def generate_scenario(llm, inputs, language="French"):
     # Task 7: Detail all scenes
     task_detail_scenes_output = _run_task(
         "specialiste_scene",
-        "Pour CHAQUE scène listée dans le découpage, écris une description détaillée (objectif, obstacles, ambiance, issues possibles). Ne fais pas de phrase d'introduction ou de remarques. Commence directement par la description de la première scène en mettant en avant le titre puis les éléments descriptifs à la ligne..",
+        "Pour CHAQUE scène listée dans le découpage, écris une description détaillée (objectif, obstacles, ambiance, issues possibles). Ne fais pas de phrase d'introduction ou de remarques. Commence directement par la description de la première scène en mettant en avant le titre puis les éléments descriptifs à la ligne sous forme de liste.",
         language,
         decoupage_scenes=task_decoupage_scenes_output
     )
