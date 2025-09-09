@@ -81,6 +81,7 @@ def generate():
 
     # --- Dynamic LLM Initialization ---
     selected_model = data.get('model', 'gemini-flash')
+    language = data.get('language', 'French') # Default to French
     try:
         llm = get_llm_instance(selected_model)
     except Exception as e:
@@ -93,7 +94,7 @@ def generate():
         try:
             # Pass the entire data payload from the form to the generator.
             # The generator function is now responsible for handling the inputs.
-            for html_brick in generate_scenario(llm=llm, inputs=data):
+            for html_brick in generate_scenario(llm=llm, inputs=data, language=language):
                 yield html_brick
         except Exception as e:
             app.logger.error(f"An error occurred during scenario generation: {e}")
