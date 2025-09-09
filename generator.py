@@ -8,7 +8,7 @@ def _create_chain(llm, prompt_template):
     prompt = ChatPromptTemplate.from_template(prompt_template)
     return prompt | llm | StrOutputParser()
 
-def generate_scenario(llm, inputs):
+def generate_scenario(llm, inputs, language="French"):
     """
     Generates a scenario by yielding each step as an HTML brick, using a flexible input structure.
     """
@@ -75,7 +75,7 @@ def generate_scenario(llm, inputs):
         },
     }
 
-    def _run_task(agent_name, task_description, **kwargs):
+    def _run_task(agent_name, task_description, language, **kwargs):
         agent = agents[agent_name]
         # Filter out any values that are None or "N/A" to keep the prompt clean
         clean_kwargs = {k: v for k, v in kwargs.items() if v and v != "Non spécifié"}
@@ -89,38 +89,20 @@ def generate_scenario(llm, inputs):
 
 **Tâche à réaliser**:
 {task_description}
+
+**Instruction finale**: Rédige la réponse en {language}.
 """
         chain = _create_chain(llm, prompt_template)
         return chain.invoke(clean_kwargs)
 
-    # --- Input Summary ---
-    input_descriptions = {
-        "game_system": ("Système de jeu", "Le système de règles qui sera utilisé."),
-        "player_count": ("Nombre de joueurs", "Le nombre de joueurs prévu pour le scénario."),
-        "theme_tone": ("Thème et Ton", "L'ambiance générale et le style du scénario."),
-        "core_idea": ("Idée de base", "Le concept central ou le point de départ de l'histoire."),
-        "constraints": ("Contraintes", "Les contraintes spécifiques à respecter (ex: durée, type de personnages)."),
-        "key_elements": ("Éléments clés à inclure", "Les éléments qui doivent absolument apparaître dans le scénario."),
-        "elements_to_avoid": ("Éléments à éviter", "Les sujets ou éléments à ne pas inclure.")
-    }
-
-    summary_table_html = "<h2>Récapitulatif de vos choix</h2>"
-    summary_table_html += "<table><thead><tr><th>Paramètre</th><th>Description</th><th>Votre Choix</th></tr></thead><tbody>"
-    for key, (name, desc) in input_descriptions.items():
-        value = user_context.get(key, "Non spécifié")
-        value_escaped = html.escape(str(value))
-        summary_table_html += f"<tr><td><strong>{name}</strong></td><td>{desc}</td><td>{value_escaped}</td></tr>"
-    summary_table_html += "</tbody></table>"
-
     # --- Step 1: Generate Title ---
-    title_text = user_context['core_idea'] if user_context['core_idea'] not in ["Non spécifié", "N/A", ""] else "Scénario d'Aventure"
-    yield f"<h1>{title_text}</h1>"
-    yield summary_table_html
+    yield f"<h1>Scénario Généré</h1>"
 
     # Task 1: Generate initial ideas
     task_ideation_output = _run_task(
         "ideateur",
         "Génère 2 à 3 accroches de scénario distinctes et percutantes basées sur le contexte fourni. Chaque accroche doit être un court paragraphe intrigant. Commence directement par la première accroche, sans phrase d'introduction.",
+        language,
         **user_context
     )
     yield f"<h2>Accroches Initiales</h2>{markdown2.markdown(task_ideation_output, extras=markdown_options)}"
@@ -130,6 +112,7 @@ def generate_scenario(llm, inputs):
     task_antagoniste_output = _run_task(
         "stratege",
         "En te basant sur l'accroche sélectionnée et le contexte général fourni par l'utilisateur, développe l'antagoniste principal. Crée une fiche descriptive complète pour cet antagoniste (motivations, méthodes, etc.).",
+        language,
         **user_context,
         accroche_selectionnee=accroche_selectionnee
     )
@@ -138,6 +121,7 @@ def generate_scenario(llm, inputs):
     task_contexte_output = _run_task(
         "contextualisateur",
         "À partir de l'accroche, de l'antagoniste et du contexte utilisateur, construis le contexte du monde. Décris l'environnement, le climat social/politique, et les raisons pour lesquelles l'intrigue se déclenche maintenant.",
+        language,
         **user_context,
         accroche=accroche_selectionnee,
         antagoniste=task_antagoniste_output
@@ -147,6 +131,7 @@ def generate_scenario(llm, inputs):
     task_synopsis_output = _run_task(
         "dramaturge",
         "Synthétise toutes les informations (contexte utilisateur, accroche, antagoniste, contexte du monde) pour écrire un synopsis global de l'histoire (300-400 mots) avec un début, un milieu et une fin clairs.",
+        language,
         **user_context,
         accroche=accroche_selectionnee,
         antagoniste=task_antagoniste_output,
@@ -157,6 +142,7 @@ def generate_scenario(llm, inputs):
     task_decoupage_scenes_output = _run_task(
         "metteur_en_scene",
         "En te basant sur le synopsis, découpe l'histoire en une liste de scènes clés. Pour chaque scène, donne un titre court et descriptif. La liste doit suivre une progression logique.",
+        language,
         synopsis=task_synopsis_output
     )
     yield f"<h2>Découpage des Scènes</h2>{markdown2.markdown(task_decoupage_scenes_output, extras=markdown_options)}"
@@ -164,6 +150,7 @@ def generate_scenario(llm, inputs):
     task_detail_scenes_output = _run_task(
         "specialiste_scene",
         "Pour CHAQUE scène listée dans le découpage, écris une description détaillée (objectif, obstacles, ambiance, issues possibles).",
+        language,
         decoupage_scenes=task_decoupage_scenes_output
     )
     yield f"<h2>Scènes Détaillées</h2>{markdown2.markdown(task_detail_scenes_output, extras=markdown_options)}"
@@ -171,6 +158,7 @@ def generate_scenario(llm, inputs):
     task_architecte_pnj_output = _run_task(
         "architecte_pnj",
         "En te basant sur le synopsis et les scènes détaillées, identifie 3 à 5 PNJ majeurs et crée une fiche descriptive pour chacun.",
+        language,
         synopsis=task_synopsis_output,
         scenes_detaillees=task_detail_scenes_output
     )
@@ -179,6 +167,7 @@ def generate_scenario(llm, inputs):
     task_architecte_lieux_output = _run_task(
         "architecte_lieux",
         "En te basant sur le synopsis et les scènes détaillées, identifie 3 à 5 lieux importants et écris une description détaillée pour chacun.",
+        language,
         synopsis=task_synopsis_output,
         scenes_detaillees=task_detail_scenes_output
     )
