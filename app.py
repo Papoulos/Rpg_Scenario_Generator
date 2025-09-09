@@ -202,8 +202,14 @@ def download_pdf():
                     font-size: 24pt;
                     /* Set a string variable with the content of the h2 for the footer */
                     string-set: current_section content();
+                    page-break-after: avoid;
                 }}
-                h3 {{ font-size: 18pt; border-bottom: 1px solid #eeeeee; padding-bottom: 5px; }}
+                h3 {{
+                    font-size: 18pt;
+                    border-bottom: 1px solid #eeeeee;
+                    padding-bottom: 5px;
+                    page-break-after: avoid;
+                }}
                 pre {{ background-color: #f5f5f5; padding: 1em; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; font-family: 'Courier New', Courier, monospace; }}
                 table {{ border-collapse: collapse; width: 100%; margin-top: 1em;}}
                 th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
