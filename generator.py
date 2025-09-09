@@ -125,7 +125,7 @@ def generate_scenario(llm, inputs, language="French"):
     # Task 2: Create the Antagonist
     task_antagoniste_output = _run_task(
         "stratege",
-        "En te basant sur l'accroche sélectionnée et le contexte général fourni par l'utilisateur, développe l'antagoniste principal. Crée une fiche descriptive complète pour cet antagoniste (motivations, méthodes, etc.).",
+        "En te basant sur l'accroche sélectionnée et le contexte général fourni par l'utilisateur, développe l'antagoniste principal. Ne fais pas de phrase d'introduction ou de remarques. Crée une fiche descriptive complète pour cet antagoniste (motivations, méthodes, etc.).",
         language,
         **user_context,
         accroche_selectionnee=accroche_selectionnee
@@ -144,7 +144,7 @@ def generate_scenario(llm, inputs, language="French"):
     # Task 4: Write the Synopsis
     task_synopsis_output = _run_task(
         "dramaturge",
-        "Synthétise toutes les informations (contexte utilisateur, accroche, antagoniste, contexte du monde) pour écrire un synopsis global de l'histoire (300-400 mots) avec un début, un milieu et une fin clairs.",
+        "Synthétise toutes les informations (contexte utilisateur, accroche, antagoniste, contexte du monde) pour écrire un synopsis global de l'histoire (300-400 mots) avec un début, un milieu et une fin clairs. Ne fais pas de phrase d'introduction ou de remarques.",
         language,
         **user_context,
         accroche=accroche_selectionnee,
@@ -155,7 +155,7 @@ def generate_scenario(llm, inputs, language="French"):
     # Task 5: Outline the Scenes
     task_decoupage_scenes_output = _run_task(
         "metteur_en_scene",
-        "En te basant sur le synopsis, découpe l'histoire en une liste de scènes clés. Pour chaque scène, donne un titre court et descriptif. La liste doit suivre une progression logique.",
+        "En te basant sur le synopsis, découpe l'histoire en une liste de scènes clés. Pour chaque scène, donne un titre court et descriptif. La liste doit suivre une progression logique. Ne fais pas de phrase d'introduction ou de remarques.",
         language,
         synopsis=task_synopsis_output
     )
