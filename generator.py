@@ -73,6 +73,11 @@ def generate_scenario(llm, inputs, language="French"):
             "goal": "Assurer la logique et la cohésion globale du scénario à travers les différentes étapes de sa création.",
             "backstory": "Tu es un contrôleur qualité narratif avec un œil de lynx pour les détails. Tu garantis que le produit final soit un tout harmonieux.",
         },
+        "generateur_titre": {
+            "role": "Générateur de Titre",
+            "goal": "À partir de l'accroche d'un scénario, créer un titre percutant et mémorable.",
+            "backstory": "Tu es un publicitaire spécialisé dans la création de titres accrocheurs. Tu sais comment capturer l'essence d'une histoire en quelques mots.",
+        },
     }
 
     def _run_task(agent_name, task_description, language, **kwargs):
@@ -95,10 +100,7 @@ def generate_scenario(llm, inputs, language="French"):
         chain = _create_chain(llm, prompt_template)
         return chain.invoke(clean_kwargs)
 
-    # --- Step 1: Generate Title ---
-    yield f"<h1>Scénario Généré</h1>"
-
-    # Task 1: Generate initial ideas
+    # --- Step 1: Generate initial ideas ---
     task_ideation_output = _run_task(
         "ideateur",
         "Génère 2 à 3 accroches de scénario distinctes et percutantes basées sur le contexte fourni. Chaque accroche doit être un court paragraphe intrigant. Commence directement par la première accroche, sans phrase d'introduction.",
@@ -108,6 +110,18 @@ def generate_scenario(llm, inputs, language="French"):
     yield f"<h2>Accroches Initiales</h2>{markdown2.markdown(task_ideation_output, extras=markdown_options)}"
     hooks = [hook.strip() for hook in task_ideation_output.split('\n\n') if hook.strip()]
     accroche_selectionnee = hooks[0] if hooks else task_ideation_output
+
+    # --- Step 2: Generate Title ---
+    task_titre_output = _run_task(
+        "generateur_titre",
+        "En te basant sur l'accroche de scénario suivante, génère 5 propositions de titres percutants. Ne retourne que les titres, un par ligne, sans introduction ni numérotation.",
+        language,
+        accroche_selectionnee=accroche_selectionnee
+    )
+    # Select the first title and remove potential markdown (like asterisks)
+    titres = [t.strip().replace('*', '') for t in task_titre_output.split('\n') if t.strip()]
+    titre_selectionne = titres[0] if titres else "Scénario Sans Titre"
+    yield f"<h1>{html.escape(titre_selectionne)}</h1>"
     # Task 2: Create the Antagonist
     task_antagoniste_output = _run_task(
         "stratege",
@@ -172,3 +186,10 @@ def generate_scenario(llm, inputs, language="French"):
         scenes_detaillees=task_detail_scenes_output
     )
     yield f"<h2>Lieux Importants</h2>{markdown2.markdown(task_architecte_lieux_output, extras=markdown_options)}"
+
+    # --- Final Step: User Inputs Recap ---
+    user_inputs_html = "<h2>Récapitulatif des Entrées Utilisateur</h2><ul>"
+    for key, value in user_context.items():
+        user_inputs_html += f"<li><strong>{key.replace('_', ' ').capitalize()}:</strong> {html.escape(str(value))}</li>"
+    user_inputs_html += "</ul>"
+    yield user_inputs_html

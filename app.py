@@ -131,13 +131,47 @@ def download_pdf():
     if title_tag:
         title_tag.decompose() # Remove title from main content so it's not duplicated
 
-    # Add page-break class to all top-level sections for better PDF layout
+    # --- Reorder and filter sections for PDF ---
+    sections = {}
     for h2 in soup.find_all('h2'):
+        section_title = h2.get_text()
+        # Use a list to store the h2 and its subsequent siblings
+        content_parts = [h2]
+        for sibling in h2.find_next_siblings():
+            if sibling.name == 'h2':
+                break
+            content_parts.append(sibling)
+        sections[section_title] = content_parts
+
+    # The desired order of sections in the PDF, based on user feedback
+    desired_order = [
+        "Accroches Initiales",
+        "Synopsis",
+        "Contexte du Monde",
+        "Antagoniste",
+        "Découpage des Scènes",
+        "Scènes Détaillées",
+        "Personnages Non-Joueurs (PNJ)",
+        "Lieux Importants",
+        "Récapitulatif des Entrées Utilisateur"
+    ]
+
+    # Create a new beautiful soup object that will contain the ordered content
+    ordered_soup_div = BeautifulSoup("<div></div>", "html.parser").div
+
+    for title in desired_order:
+        if title in sections:
+            # Append a copy of each element to the new soup
+            for element in sections[title]:
+                ordered_soup_div.append(element.copy())
+
+    # Add page-break class to all top-level sections for better PDF layout
+    for h2 in ordered_soup_div.find_all('h2'):
         h2['class'] = 'new-page'
 
-    # --- 3. Build TOC ---
+    # --- 3. Build TOC from the ordered content ---
     toc_list = []
-    headings = soup.find_all(['h2', 'h3'])
+    headings = ordered_soup_div.find_all(['h2', 'h3'])
     for heading in headings:
         heading_id = slugify(heading.get_text())
         heading['id'] = heading_id
@@ -151,94 +185,92 @@ def download_pdf():
     toc_html += '</ul></nav>'
 
     # --- 4. Construct final HTML for PDF ---
-    final_html_content = str(soup)
+    final_html_content = str(ordered_soup_div)
     html_for_pdf = f"""
     <html>
         <head>
             <style>
                 @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Roboto:wght@400;700&display=swap');
+
+                /* General Body and Font Styles */
                 body {{ font-family: 'Merriweather', serif; line-height: 1.6; color: #333; }}
                 h1, h2, h3, h4, h5, h6 {{ font-family: 'Roboto', sans-serif; font-weight: 700; }}
-
-                /* Cover Page Styles */
-                .cover-title {{ font-size: 40pt; text-align: center; margin-top: 35vh; }}
-                .cover-synopsis {{ font-size: 12pt; text-align: center; margin-top: 2em; font-style: italic; }}
-
-                /* General Heading Styles */
-                h2 {{ border-bottom: 2px solid #cccccc; padding-bottom: 10px; font-size: 24pt; }}
+                h2 {{
+                    border-bottom: 2px solid #cccccc;
+                    padding-bottom: 10px;
+                    font-size: 24pt;
+                    /* Set a string variable with the content of the h2 for the footer */
+                    string-set: current_section content();
+                }}
                 h3 {{ font-size: 18pt; border-bottom: 1px solid #eeeeee; padding-bottom: 5px; }}
-
                 pre {{ background-color: #f5f5f5; padding: 1em; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; font-family: 'Courier New', Courier, monospace; }}
-                code {{ font-family: 'Courier New', Courier, monospace; }}
                 table {{ border-collapse: collapse; width: 100%; margin-top: 1em;}}
                 th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
                 th {{ background-color: #f2f2f2; }}
 
-                /* Page layout */
-                @page {{ size: A4; margin: 2cm; }}
-                @page:first {{ margin: 0; }}
-
-                /* Force page breaks for sections */
-                .new-page {{ page-break-before: always; }}
-
-                /* Table of Contents Styling */
-                #toc {{ page-break-after: always; }}
-                #toc h2 {{ page-break-before: never; text-align: center; border-bottom: 2px solid #cccccc; }}
-                h3 {{
-                    font-size: 18pt;
-                    border-bottom: 1px solid #eeeeee;
-                    padding-bottom: 5px;
-                }}
-                pre {{
-                    background-color: #f5f5f5;
-                    padding: 1em;
-                    border-radius: 4px;
-                    white-space: pre-wrap;
-                    word-wrap: break-word;
-                    font-family: 'Courier New', Courier, monospace;
-                }}
-                code {{ font-family: 'Courier New', Courier, monospace; }}
-                table {{ border-collapse: collapse; width: 100%; margin-top: 1em;}}
-                th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
-                th {{ background-color: #f2f2f2; }}
-
-                /* Page layout */
+                /* Page Definitions */
                 @page {{
                     size: A4;
                     margin: 2cm;
+                    @bottom-left {{
+                        content: string(current_section, first); /* Use the string set by h2 */
+                        font-size: 9pt;
+                        color: #888;
+                    }}
+                    @bottom-right {{
+                        content: "Page " counter(page);
+                        font-size: 9pt;
+                        color: #888;
+                    }}
                 }}
                 @page:first {{
-                    /* Cover page with no margins */
-                    margin: 0;
+                    margin: 1cm;
+                    @bottom-center {{
+                        content: "Generated by the \\"Scenario Generator X Papoulos\\"";
+                        font-size: 9pt;
+                        color: #888;
+                        vertical-align: top;
+                    }}
                 }}
 
-                /* Table of Contents Styling */
+                /* Cover Page */
+                .cover-page {{
+                    page-break-after: always;
+                    width: 100%;
+                    height: 90vh; /* Make it slightly less than 100 to leave space for footer */
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    text-align: center;
+                }}
+                .cover-title {{
+                    font-size: 40pt;
+                }}
+
+                /* Table of Contents */
                 #toc {{
-                    page-break-after: always; /* TOC is on its own page */
+                    page-break-after: always;
                 }}
                 #toc h2 {{
-                    page-break-before: never; /* Don't start TOC on a new page if it's the first thing after the cover */
                     text-align: center;
                     border-bottom: 2px solid #cccccc;
                     padding-bottom: 10px;
+                    string-set: current_section "Table des Matières"; /* Set TOC title for its own footer */
                 }}
-                #toc ul {{
-                    list-style-type: none;
-                    padding: 0;
-                }}
-                #toc li a {{
-                    text-decoration: none;
-                    color: #333;
-                    display: block;
-                    padding: 5px 0;
-                }}
-                 #toc li a::after {{
-                    content: leader('.') target-counter(attr(href), page);
-                }}
+                #toc ul {{ list-style-type: none; padding: 0; }}
+                #toc li a {{ text-decoration: none; color: #333; display: block; padding: 5px 0; }}
+                #toc li a::after {{ content: leader('.') target-counter(attr(href), page); }}
+
+                /* Other Sections */
+                .new-page {{ page-break-after: always; }}
+
             </style>
         </head>
         <body>
-            <h1>{title_text}</h1>
+            <div class="cover-page">
+                <h1 class="cover-title">{title_text}</h1>
+            </div>
             {toc_html}
             {final_html_content}
         </body>
