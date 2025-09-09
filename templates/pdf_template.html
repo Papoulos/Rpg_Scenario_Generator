@@ -80,8 +80,9 @@
         #toc li a { text-decoration: none; color: #333; display: block; padding: 5px 0; }
         #toc li a::after { content: leader('.') target-counter(attr(href), page); }
 
-        /* Other Sections */
-        .new-page { page-break-after: always; }
+        /* This class is added by the generator to each H2 for page-breaking */
+        .new-page { page-break-before: always; }
+
     </style>
 </head>
 <body>
@@ -91,6 +92,48 @@
 
     {{ toc|safe }}
 
-    {{ content|safe }}
+    {#
+      The content is now a dictionary of sections.
+      The user can reorder these blocks to change the PDF layout.
+      The check '{% if sections.section_name %}' makes the template robust
+      in case a section was not generated.
+    #}
+
+    {% if sections.accroches_initiales %}
+        {{ sections.accroches_initiales|safe }}
+    {% endif %}
+
+    {% if sections.synopsis %}
+        {{ sections.synopsis|safe }}
+    {% endif %}
+
+    {% if sections.contexte_du_monde %}
+        {{ sections.contexte_du_monde|safe }}
+    {% endif %}
+
+    {% if sections.antagoniste %}
+        {{ sections.antagoniste|safe }}
+    {% endif %}
+
+    {% if sections.decoupage_des_scenes %}
+        {{ sections.decoupage_des_scenes|safe }}
+    {% endif %}
+
+    {% if sections.scenes_detaillees %}
+        {{ sections.scenes_detaillees|safe }}
+    {% endif %}
+
+    {% if sections.personnages_non_joueurs %}
+        {{ sections.personnages_non_joueurs|safe }}
+    {% endif %}
+
+    {% if sections.lieux_importants %}
+        {{ sections.lieux_importants|safe }}
+    {% endif %}
+
+    {% if sections.recapitulatif_des_entrees_utilisateur %}
+        {{ sections.recapitulatif_des_entrees_utilisateur|safe }}
+    {% endif %}
+
 </body>
 </html>
