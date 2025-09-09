@@ -107,7 +107,7 @@ def generate_scenario(llm, inputs, language="French"):
         language,
         **user_context
     )
-    yield f"<h2>Accroches Initiales</h2>{markdown2.markdown(task_ideation_output, extras=markdown_options)}"
+    yield f"{markdown2.markdown(task_ideation_output, extras=markdown_options)}"
     hooks = [hook.strip() for hook in task_ideation_output.split('\n\n') if hook.strip()]
     accroche_selectionnee = hooks[0] if hooks else task_ideation_output
 
@@ -140,7 +140,7 @@ def generate_scenario(llm, inputs, language="French"):
         accroche=accroche_selectionnee,
         antagoniste=task_antagoniste_output
     )
-    yield f"<h2>Contexte du Monde</h2>{markdown2.markdown(task_contexte_output, extras=markdown_options)}"
+    yield f"{markdown2.markdown(task_contexte_output, extras=markdown_options)}"
     # Task 4: Write the Synopsis
     task_synopsis_output = _run_task(
         "dramaturge",
@@ -151,7 +151,7 @@ def generate_scenario(llm, inputs, language="French"):
         antagoniste=task_antagoniste_output,
         contexte_monde=task_contexte_output
     )
-    yield f"<h2>Synopsis</h2>{markdown2.markdown(task_synopsis_output, extras=markdown_options)}"
+    yield f"{markdown2.markdown(task_synopsis_output, extras=markdown_options)}"
     # Task 5: Outline the Scenes
     task_decoupage_scenes_output = _run_task(
         "metteur_en_scene",
@@ -159,28 +159,28 @@ def generate_scenario(llm, inputs, language="French"):
         language,
         synopsis=task_synopsis_output
     )
-    yield f"<h2>Découpage des Scènes</h2>{markdown2.markdown(task_decoupage_scenes_output, extras=markdown_options)}"
+    yield f"{markdown2.markdown(task_decoupage_scenes_output, extras=markdown_options)}"
     # Task 7: Detail all scenes
     task_detail_scenes_output = _run_task(
         "specialiste_scene",
-        "Pour CHAQUE scène listée dans le découpage, écris une description détaillée (objectif, obstacles, ambiance, issues possibles). Ne crée pas de titre global et ne fais pas de phrase d'introduction. Commence directement par la description de la première scène.",
+        "Pour CHAQUE scène listée dans le découpage, écris une description détaillée (objectif, obstacles, ambiance, issues possibles). Ne fais pas de phrase d'introduction ou de remarques. Commence directement par la description de la première scène en mettant en avant le titre puis les éléments descriptifs à la ligne..",
         language,
         decoupage_scenes=task_decoupage_scenes_output
     )
-    yield f"<h2>Scènes Détaillées</h2>{markdown2.markdown(task_detail_scenes_output, extras=markdown_options)}"
+    yield f"{markdown2.markdown(task_detail_scenes_output, extras=markdown_options)}"
     # Task 8: Create NPCs
     task_architecte_pnj_output = _run_task(
         "architecte_pnj",
-        "En te basant sur le synopsis et les scènes détaillées, identifie 3 à 5 PNJ majeurs et crée une fiche descriptive pour chacun. Ne crée pas de titre global et ne fais pas de phrase d'introduction. Commence directement par la description du premier PNJ.",
+        "En te basant sur le synopsis et les scènes détaillées, identifie 3 à 5 PNJ majeurs et crée une fiche descriptive pour chacun. Ne fais pas de phrase d'introduction ou de remarques. Commence directement par la description du premier PNJ en mettant en avant le titre puis les éléments descriptifs à la ligne..",
         language,
         synopsis=task_synopsis_output,
         scenes_detaillees=task_detail_scenes_output
     )
-    yield f"<h2>Personnages Non-Joueurs (PNJ)</h2>{markdown2.markdown(task_architecte_pnj_output, extras=markdown_options)}"
+    yield f"{markdown2.markdown(task_architecte_pnj_output, extras=markdown_options)}"
     # Task 9: Create Locations
     task_architecte_lieux_output = _run_task(
         "architecte_lieux",
-        "En te basant sur le synopsis et les scènes détaillées, identifie 3 à 5 lieux importants et écris une description détaillée pour chacun. Ne crée pas de titre global et ne fais pas de phrase d'introduction. Commence directement par la description du premier lieu.",
+        "En te basant sur le synopsis et les scènes détaillées, identifie 3 à 5 lieux importants et écris une description détaillée pour chacun. Ne fais pas de phrase d'introduction ou de remarques. Commence directement par la description du premier lieu en mettant en avant le titre puis les éléments descriptifs à la ligne.",
         language,
         synopsis=task_synopsis_output,
         scenes_detaillees=task_detail_scenes_output
