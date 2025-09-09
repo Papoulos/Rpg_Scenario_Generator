@@ -163,7 +163,7 @@ def generate_scenario(llm, inputs, language="French"):
     # Task 7: Detail all scenes
     task_detail_scenes_output = _run_task(
         "specialiste_scene",
-        "Pour CHAQUE scène listée dans le découpage, écris une description détaillée (objectif, obstacles, ambiance, issues possibles).",
+        "Pour CHAQUE scène listée dans le découpage, écris une description détaillée (objectif, obstacles, ambiance, issues possibles). Ne crée pas de titre global et ne fais pas de phrase d'introduction. Commence directement par la description de la première scène.",
         language,
         decoupage_scenes=task_decoupage_scenes_output
     )
@@ -171,7 +171,7 @@ def generate_scenario(llm, inputs, language="French"):
     # Task 8: Create NPCs
     task_architecte_pnj_output = _run_task(
         "architecte_pnj",
-        "En te basant sur le synopsis et les scènes détaillées, identifie 3 à 5 PNJ majeurs et crée une fiche descriptive pour chacun.",
+        "En te basant sur le synopsis et les scènes détaillées, identifie 3 à 5 PNJ majeurs et crée une fiche descriptive pour chacun. Ne crée pas de titre global et ne fais pas de phrase d'introduction. Commence directement par la description du premier PNJ.",
         language,
         synopsis=task_synopsis_output,
         scenes_detaillees=task_detail_scenes_output
@@ -180,7 +180,7 @@ def generate_scenario(llm, inputs, language="French"):
     # Task 9: Create Locations
     task_architecte_lieux_output = _run_task(
         "architecte_lieux",
-        "En te basant sur le synopsis et les scènes détaillées, identifie 3 à 5 lieux importants et écris une description détaillée pour chacun.",
+        "En te basant sur le synopsis et les scènes détaillées, identifie 3 à 5 lieux importants et écris une description détaillée pour chacun. Ne crée pas de titre global et ne fais pas de phrase d'introduction. Commence directement par la description du premier lieu.",
         language,
         synopsis=task_synopsis_output,
         scenes_detaillees=task_detail_scenes_output
