@@ -140,7 +140,7 @@ def generate_scenario(llm, inputs, language="French"):
         accroche=accroche_selectionnee,
         antagoniste=task_antagoniste_output
     )
-    yield f"{markdown2.markdown(task_contexte_output, extras=markdown_options)}"
+    yield f"<h2>World Context</h2>{markdown2.markdown(task_contexte_output, extras=markdown_options)}"
     # Task 4: Write the Synopsis
     task_synopsis_output = _run_task(
         "dramaturge",
