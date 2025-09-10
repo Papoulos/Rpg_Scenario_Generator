@@ -58,7 +58,7 @@ def create_pdf(html_content, template_path):
     # 4. Extract content for each section into a dictionary
     sections_content = {}
     # Find all h2 and h3 elements
-    headings = soup.find_all(['h2', 'h3'])
+    headings = soup.find_all(['h2'])
     previous_heading = None
     
     for heading in headings:
