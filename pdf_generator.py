@@ -56,26 +56,27 @@ def create_pdf(html_content, template_path):
 
 
     # 4. Extract content for each section into a dictionary
-    # The key is a slug of the section title, and the value is the section's HTML content.
     sections_content = {}
-    for h2 in soup.find_all('h2'):
-        section_title = h2.get_text()
+    # Find all h2 and h3 elements
+    headings = soup.find_all(['h2', 'h3'])
+    previous_heading = None
+    
+    for heading in headings:
+        # Use the current heading to get the section title and slug
+        section_title = heading.get_text()
         section_slug = slugify(section_title)
-
-        # The content of a section is all the sibling tags after the h2,
-        # until the next h2.
+    
+        # Get all sibling tags until the next heading
         section_html = ''
-        for sibling in h2.find_next_siblings():
-            if sibling.name == 'h2':
-                break  # Stop when the next section begins
+        for sibling in heading.find_next_siblings():
+            if sibling.name in ['h2', 'h3']:
+                break
             section_html += str(sibling)
-
-        # We also add the h2 title itself to the content, but give it a class
-        # so it can be styled or hidden in the template if needed.
-        h2['class'] = 'new-page' # for page breaks
-
-        # The full content includes the title and the following HTML
-        sections_content[section_slug] = str(h2) + section_html
+    
+    # Add the heading and its content to the dictionary
+    # You can now give a class to both h2 and h3 if needed for styling
+    heading['class'] = 'new-page' # Or create a specific class
+    sections_content[section_slug] = str(heading) + section_html
 
 
     # 5. Render the final PDF using the Jinja2 template
