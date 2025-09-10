@@ -61,11 +61,11 @@ def generate_scenario(llm, inputs, language="French"):
         "architecte_pnj": {
             "role": "Architecte des PNJ",
             "goal": "Dresser les fiches des PNJ majeurs (alliés, neutres, antagonistes) avec identité, personnalité, et motivations.",
-            "backstory": "Expert en psychologie, tu sais que des PNJ mémorables sont la clé d'un monde vivant. Tu crées des individus crédibles et utiles à l'histoire.",
+            "backstory": "Expert en psychologie, tu sais que des PNJ mémorables sont la clé d'un monde vivant. Tu crées des individus crédibles et utiles à l'histoire. Présente chaque personnage avec le nom en titre et les éléments suivant à la ligne en mettant en avant leurs titres en gras.",
         },
         "architecte_lieux": {
             "role": "Architecte des Lieux",
-            "goal": "Détailler les lieux importants du scénario avec une description sensorielle, une fonction narrative et des opportunités de jeu.",
+            "goal": "Détailler les lieux importants du scénario avec une description sensorielle globale, une fonction narrative et des opportunités de jeu. Présente chaque lieu avec le nom en titre et les éléments suivant à la ligne en mettant en avant leurs titres en gras.",
             "backstory": "Tu es un urbaniste de l'imaginaire, concevant des lieux qui sont des acteurs à part entière de l'histoire.",
         },
         "verificateur": {
@@ -134,7 +134,7 @@ def generate_scenario(llm, inputs, language="French"):
     # Task 3: Build the World Context
     task_contexte_output = _run_task(
         "contextualisateur",
-        "À partir de l'accroche, de l'antagoniste et du contexte utilisateur, construis le contexte du monde. Décris l'environnement, le climat social/politique, et les raisons pour lesquelles l'intrigue se déclenche maintenant.",
+        "À partir de l'accroche, de l'antagoniste et du contexte utilisateur, construis le contexte du monde. Ne fais pas de phrase d'introduction ou de remarques. Décris l'environnement et le climat social/politique dans un seul paragraphe puis les raisons pour lesquelles l'intrigue se déclenche maintenant. Limite les textes à environ 200 mots.",
         language,
         **user_context,
         accroche=accroche_selectionnee,
