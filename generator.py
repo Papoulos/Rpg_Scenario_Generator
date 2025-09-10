@@ -171,7 +171,7 @@ def generate_scenario(llm, inputs, language="French"):
     # Task 8: Create NPCs
     task_architecte_pnj_output = _run_task(
         "architecte_pnj",
-        "En te basant sur le synopsis et les scènes détaillées, identifie 3 à 5 PNJ majeurs et crée une fiche descriptive pour chacun. Ne fais pas de phrase d'introduction ou de remarques. Commence directement par la description du premier PNJ en mettant en avant le titre puis les éléments descriptifs à la ligne..",
+        "En te basant sur le synopsis et les scènes détaillées, identifie 3 à 5 PNJ majeurs et crée une fiche descriptive pour chacun. Ne fais pas de phrase d'introduction ou de remarques. Commence directement par la description du premier PNJ en mettant en avant le nom en gras puis les éléments descriptifs à la ligne. Chaque partie doit aussi avoir un titre en gras.",
         language,
         synopsis=task_synopsis_output,
         scenes_detaillees=task_detail_scenes_output
@@ -180,7 +180,7 @@ def generate_scenario(llm, inputs, language="French"):
     # Task 9: Create Locations
     task_architecte_lieux_output = _run_task(
         "architecte_lieux",
-        "En te basant sur le synopsis et les scènes détaillées, identifie 3 à 5 lieux importants et écris une description détaillée pour chacun. Ne fais pas de phrase d'introduction ou de remarques. Commence directement par la description du premier lieu en mettant en avant le titre puis les éléments descriptifs à la ligne.",
+        "En te basant sur le synopsis et les scènes détaillées, identifie 3 à 5 lieux importants et écris une description détaillée pour chacun. Ne fais pas de phrase d'introduction ou de remarques. Commence directement par la description du premier lieu en mettant en avant le titre en gras puis les éléments descriptifs à la ligne. Chaque partie doit aussi avoir un titre en gras.",
         language,
         synopsis=task_synopsis_output,
         scenes_detaillees=task_detail_scenes_output
