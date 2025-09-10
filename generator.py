@@ -130,7 +130,7 @@ def generate_scenario(llm, inputs, language="French"):
         **user_context,
         accroche_selectionnee=accroche_selectionnee
     )
-    yield f"<h2>Antagoniste</h2>{markdown2.markdown(task_antagoniste_output, extras=markdown_options)}"
+    yield f"{markdown2.markdown(task_antagoniste_output, extras=markdown_options)}"
     # Task 3: Build the World Context
     task_contexte_output = _run_task(
         "contextualisateur",
