@@ -76,7 +76,8 @@ def create_pdf(html_content, template_path):
     # Add the heading and its content to the dictionary
     # You can now give a class to both h2 and h3 if needed for styling
     heading['class'] = 'new-page' # Or create a specific class
-    sections_content[section_slug] = str(heading) + section_html
+    # sections_content[section_slug] = str(heading) + section_html
+    sections_content[section_slug] = f'<h2 class="new-page">{h2.get_text()}</h2>' + section_html
 
 
     # 5. Render the final PDF using the Jinja2 template
