@@ -134,7 +134,7 @@ def generate_scenario(llm, inputs, language="French"):
     # Task 3: Build the World Context
     task_contexte_output = _run_task(
         "contextualisateur",
-        "À partir de l'accroche, de l'antagoniste et du contexte utilisateur, construis le contexte du monde. Ne fais pas de phrase d'introduction ou de remarques. Décris l'environnement et le climat social/politique dans un seul paragraphe puis les raisons pour lesquelles l'intrigue se déclenche maintenant. Limite les textes à environ 200 mots.",
+        "À partir de l'accroche, de l'antagoniste et du contexte utilisateur, construis le contexte du monde. Ne fais pas de phrase d'introduction ou de remarques. Décris l'environnement et le climat social/politique dans un seul paragraphe puis les raisons pour lesquelles l'intrigue se déclenche maintenant. Limite les textes à environ 500 mots.",
         language,
         **user_context,
         accroche=accroche_selectionnee,
