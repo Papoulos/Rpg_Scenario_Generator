@@ -73,10 +73,18 @@ def create_pdf(html_content, template_path):
                 break
             section_html += str(sibling)
     
-        # Add the heading and its content to the dictionary
-        # You can now give a class to both h2 and h3 if needed for styling
-        heading['class'] = 'new-page' # Or create a specific class
-        sections_content[section_slug] = str(heading) + section_html
+        # Get all attributes from the original heading tag (like 'id')
+        attrs = heading.attrs
+        # Add or update the 'class' attribute
+        attrs['class'] = 'new-page'
+
+        # Build the attribute string for the new tag
+        attr_string = ' '.join([f'{key}="{value}"' for key, value in attrs.items()])
+
+        # Create the new h2 tag, preserving attributes and content
+        new_heading_html = f'<h2 {attr_string}>{heading.get_text()}</h2>'
+
+        sections_content[section_slug] = new_heading_html + section_html
 
 
     # 5. Render the final PDF using the Jinja2 template
