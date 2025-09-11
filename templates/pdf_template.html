@@ -3,13 +3,24 @@
 <head>
     <title>{{ title }}</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Roboto:wght@400;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Federo&family=Macondo&family=Macondo+Swash+Caps&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap');
+        /* --- Dynamic Font Loading --- */
+        /* The 'fonts' object is passed from the Python PDF generator */
+        {% if fonts and fonts.google_fonts_url %}
+        @import url('{{ fonts.google_fonts_url }}');
+        {% endif %}
 
-        /* General Body and Font Styles */
-        body { font-family: 'Roboto', serif; line-height: 1.6; color: #333; }
-        h1, h2, h3, h4, h5, h6 { font-family: 'Orbitron', sans-serif; font-weight: 700; }
+        /* --- General Body and Font Styles --- */
+        /* Fallback fonts are provided in case the Google Font fails to load */
+        body {
+            font-family: '{{ fonts.text_font | default('Roboto') }}', serif;
+            line-height: 1.6;
+            color: #333;
+        }
+        h1, h2, h3, h4, h5, h6 {
+            font-family: '{{ fonts.title_font | default('Roboto') }}', sans-serif;
+            font-weight: 700;
+        }
+
         h2 {
             border-bottom: 2px solid #cccccc;
             padding-bottom: 10px;
