@@ -82,16 +82,13 @@ def download_pdf():
     Handles the PDF download request by calling the pdf_generator module.
     """
     html_content = request.form.get('html_content')
+    theme_tone = request.form.get('theme_tone', 'default') # Get theme, with a default
     if not html_content:
         return "Error: Content not found.", 400
 
     try:
-        # The create_pdf function now handles everything:
-        # - HTML parsing and cleaning
-        # - TOC generation
-        # - Rendering the final HTML from a template
-        # - Generating the PDF bytes
-        pdf_bytes = create_pdf(html_content, PDF_TEMPLATE_PATH)
+        # The create_pdf function now handles everything, including font selection
+        pdf_bytes = create_pdf(html_content, PDF_TEMPLATE_PATH, theme_tone)
 
         return Response(
             pdf_bytes,

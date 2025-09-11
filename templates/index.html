@@ -96,6 +96,7 @@
                     <div id="result-html"></div>
                     <form action="/download_pdf" method="post" id="pdf-form" style="display: none; margin-top: 1em;">
                         <input type="hidden" name="html_content" id="html_content">
+                        <input type="hidden" name="theme_tone" id="theme_tone_hidden">
                         <button type="submit">Download as PDF</button>
                     </form>
                 </div>
@@ -154,6 +155,12 @@
 
                 // Generation is complete
                 htmlContentInput.value = resultHtml.innerHTML;
+
+                // Pass the theme to the PDF form
+                const themeToneInput = document.getElementById('theme_tone');
+                const hiddenThemeToneInput = document.getElementById('theme_tone_hidden');
+                hiddenThemeToneInput.value = themeToneInput.value;
+
                 pdfForm.style.display = 'block';
                 submitButton.textContent = 'Génération Terminée';
 
