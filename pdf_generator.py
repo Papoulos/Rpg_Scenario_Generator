@@ -159,7 +159,7 @@ def create_pdf(html_content, template_path, theme_tone="Default"):
         section_slug = slugify(section_title)
         section_html = ''
         for sibling in heading.find_next_siblings():
-            if sibling.name in ['h2', 'h3']:
+            if sibling.name == 'h2':
                 break
             section_html += str(sibling)
 
