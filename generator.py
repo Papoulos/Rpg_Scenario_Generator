@@ -167,7 +167,8 @@ def generate_scenario(llm, inputs, language="French"):
         language,
         decoupage_scenes=task_decoupage_scenes_output
     )
-    yield f"<h2>Scenes</h2>{markdown2.markdown(task_detail_scenes_output, extras=markdown_options)}"
+    processed_scenes_output = task_detail_scenes_output.replace('\n', '\n\n')
+    yield f"<h2>Scenes</h2>{markdown2.markdown(processed_scenes_output, extras=markdown_options)}"
     # Task 8: Create NPCs
     task_architecte_pnj_output = _run_task(
         "architecte_pnj",
@@ -176,7 +177,8 @@ def generate_scenario(llm, inputs, language="French"):
         synopsis=task_synopsis_output,
         scenes_detaillees=task_detail_scenes_output
     )
-    yield f"<h2>NPCs</h2>{markdown2.markdown(task_architecte_pnj_output, extras=markdown_options)}"
+    processed_pnj_output = task_architecte_pnj_output.replace('\n', '\n\n')
+    yield f"<h2>NPCs</h2>{markdown2.markdown(processed_pnj_output, extras=markdown_options)}"
     # Task 9: Create Locations
     task_architecte_lieux_output = _run_task(
         "architecte_lieux",
@@ -185,7 +187,8 @@ def generate_scenario(llm, inputs, language="French"):
         synopsis=task_synopsis_output,
         scenes_detaillees=task_detail_scenes_output
     )
-    yield f"<h2>Places</h2>{markdown2.markdown(task_architecte_lieux_output, extras=markdown_options)}"
+    processed_lieux_output = task_architecte_lieux_output.replace('\n', '\n\n')
+    yield f"<h2>Places</h2>{markdown2.markdown(processed_lieux_output, extras=markdown_options)}"
 
     # --- Final Step: User Inputs Recap ---
     user_inputs_html = "<h2>Récapitulatif des Entrées Utilisateur</h2><ul>"
