@@ -157,6 +157,7 @@ def generate_scenario(llm, inputs, language="French"):
         "metteur_en_scene",
         "En te basant sur le synopsis, découpe l'histoire en une liste de scènes clés. Pour chaque scène, donne un titre court et descriptif. La liste doit suivre une progression logique. Ne fais pas de phrase d'introduction ou de remarques.",
         language,
+        **user_context,
         synopsis=task_synopsis_output
     )
     yield f"{markdown2.markdown(task_decoupage_scenes_output, extras=markdown_options)}"
@@ -165,6 +166,7 @@ def generate_scenario(llm, inputs, language="French"):
         "specialiste_scene",
         "Pour CHAQUE scène listée dans le découpage, écris une description détaillée (objectif, obstacles, ambiance, issues possibles). Ne fais pas de phrase d'introduction ou de remarques. Commence directement par la description de la première scène en mettant en avant le titre puis les éléments descriptifs à la ligne sous forme de liste. Utilise un titre et une présentation ou chaque nouvel élément doit être mis à la ligne pour une présentation en liste",
         language,
+        **user_context,
         decoupage_scenes=task_decoupage_scenes_output
     )
     processed_scenes_output = task_detail_scenes_output.replace('\n', '\n\n')
@@ -174,6 +176,7 @@ def generate_scenario(llm, inputs, language="French"):
         "architecte_pnj",
         "En te basant sur le synopsis et les scènes détaillées, identifie 3 à 5 PNJ majeurs et crée une fiche descriptive pour chacun. Ne fais pas de phrase d'introduction ou de remarques. Commence directement par la description du premier PNJ en mettant en avant le nom en gras puis les éléments descriptifs à la ligne. Chaque partie doit aussi avoir un titre en gras.",
         language,
+        **user_context,
         synopsis=task_synopsis_output,
         scenes_detaillees=task_detail_scenes_output
     )
@@ -184,6 +187,7 @@ def generate_scenario(llm, inputs, language="French"):
         "architecte_lieux",
         "En te basant sur le synopsis et les scènes détaillées, identifie 3 à 5 lieux importants et écris une description détaillée pour chacun. Ne fais pas de phrase d'introduction ou de remarques. Commence directement par la description du premier lieu en mettant en avant le titre en gras puis les éléments descriptifs à la ligne. Chaque partie doit aussi avoir un titre en gras.",
         language,
+        **user_context,
         synopsis=task_synopsis_output,
         scenes_detaillees=task_detail_scenes_output
     )
