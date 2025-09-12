@@ -140,7 +140,7 @@ def generate_scenario(llm, inputs, language="French"):
         accroche=accroche_selectionnee,
         antagoniste=task_antagoniste_output
     )
-    yield f"<h2>World Context</h2>{markdown2.markdown(task_contexte_output, extras=markdown_options)}"
+    yield f'<h2 class="centered-title">Contexte du Monde</h2>{markdown2.markdown(task_contexte_output, extras=markdown_options)}'
     # Task 4: Write the Synopsis
     task_synopsis_output = _run_task(
         "dramaturge",
@@ -151,7 +151,7 @@ def generate_scenario(llm, inputs, language="French"):
         antagoniste=task_antagoniste_output,
         contexte_monde=task_contexte_output
     )
-    yield f"<h2>Synopsis</h2>{markdown2.markdown(task_synopsis_output, extras=markdown_options)}"
+    yield f'<h2 class="centered-title">Synopsis</h2>{markdown2.markdown(task_synopsis_output, extras=markdown_options)}'
     # Task 5: Outline the Scenes
     task_decoupage_scenes_output = _run_task(
         "metteur_en_scene",
@@ -170,7 +170,7 @@ def generate_scenario(llm, inputs, language="French"):
         decoupage_scenes=task_decoupage_scenes_output
     )
     processed_scenes_output = task_detail_scenes_output.replace('\n', '\n\n')
-    yield f"<h2>Scenes</h2>{markdown2.markdown(processed_scenes_output, extras=markdown_options)}"
+    yield f'<h2 class="centered-title">Scènes</h2><div class="scenes-section">{markdown2.markdown(processed_scenes_output, extras=markdown_options)}</div>'
     # Task 8: Create NPCs
     task_architecte_pnj_output = _run_task(
         "architecte_pnj",
@@ -181,7 +181,7 @@ def generate_scenario(llm, inputs, language="French"):
         scenes_detaillees=task_detail_scenes_output
     )
     processed_pnj_output = task_architecte_pnj_output.replace('\n', '\n\n')
-    yield f"<h2>NPCs</h2>{markdown2.markdown(processed_pnj_output, extras=markdown_options)}"
+    yield f'<h2 class="centered-title">PNJ</h2><div class="npcs-section">{markdown2.markdown(processed_pnj_output, extras=markdown_options)}</div>'
     # Task 9: Create Locations
     task_architecte_lieux_output = _run_task(
         "architecte_lieux",
@@ -192,10 +192,10 @@ def generate_scenario(llm, inputs, language="French"):
         scenes_detaillees=task_detail_scenes_output
     )
     processed_lieux_output = task_architecte_lieux_output.replace('\n', '\n\n')
-    yield f"<h2>Places</h2>{markdown2.markdown(processed_lieux_output, extras=markdown_options)}"
+    yield f'<h2 class="centered-title">Lieux</h2><div class="places-section">{markdown2.markdown(processed_lieux_output, extras=markdown_options)}</div>'
 
     # --- Final Step: User Inputs Recap ---
-    user_inputs_html = "<h2>Récapitulatif des Entrées Utilisateur</h2><ul>"
+    user_inputs_html = '<h2 class="centered-title">Récapitulatif des Entrées Utilisateur</h2><ul>'
     for key, value in user_context.items():
         user_inputs_html += f"<li><strong>{key.replace('_', ' ').capitalize()}:</strong> {html.escape(str(value))}</li>"
     user_inputs_html += "</ul>"
