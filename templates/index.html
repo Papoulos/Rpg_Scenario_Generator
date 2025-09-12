@@ -5,9 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RPG Scenario Generator</title>
     <style>
-        body { font-family: sans-serif; margin: 2em; background-color: #f4f4f4; }
+        html {
+            height: 100%;
+        }
+        body {
+            min-height: 100%;
+            display: grid;
+            place-items: center;
+            margin: 0;
+            font-family: sans-serif;
+            background-color: #f4f4f4;
+        }
         .container { max-width: 1400px; margin: auto; background: white; padding: 2em; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
         h1 { text-align: center; color: #333; }
+
+        .centered-title {
+            text-align: center;
+        }
+
+        .scenes-section h3, .scenes-section h4,
+        .npcs-section h3, .npcs-section h4,
+        .places-section h3, .places-section h4 {
+            font-weight: bold;
+            text-decoration: underline;
+            font-size: 1.3em;
+        }
 
         .main-content {
             display: flex;
