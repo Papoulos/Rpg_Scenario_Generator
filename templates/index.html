@@ -111,7 +111,10 @@
                 </form>
             </div>
             <div class="result-display">
-                <div id="spinner"></div>
+                <div id="placeholder" style="text-align: center; padding: 2em; color: #888;">
+                    <p>Le scénario généré apparaîtra ici.</p>
+                </div>
+                <div id="spinner" style="display: none;"></div>
 
                 <div id="result-container" style="display: none;">
                     <h2>Generated Scenario</h2>
@@ -134,9 +137,13 @@
         const pdfForm = document.getElementById('pdf-form');
         const htmlContentInput = document.getElementById('html_content');
         const submitButton = form.querySelector('button[type="submit"]');
+        const placeholder = document.getElementById('placeholder');
 
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
+
+            // Hide placeholder
+            placeholder.style.display = 'none';
 
             // Disable button and show spinner
             submitButton.disabled = true;
