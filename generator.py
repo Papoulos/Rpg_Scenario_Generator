@@ -29,55 +29,60 @@ def generate_scenario(llm, inputs, language="French"):
     # will be passed in the prompt for each task.
     agents = {
         "ideateur": {
-            "role": "Idéateur de Concept",
-            "goal": "À partir du contexte fourni par l'utilisateur, proposer 2 à 3 accroches de scénario fortes, originales et jouables.",
-            "backstory": "Tu es un maître conteur visionnaire. Ton rôle est de poser les premières pierres d’une grande histoire en t'inspirant des idées de l'utilisateur pour créer des situations intrigantes qui suscitent immédiatement la curiosité.",
-        },
+			"role": "Idéateur de Concept",
+			"goal": "Proposer 2 à 3 accroches de scénario fortes et jouables qui définissent clairement ce que les joueurs veulent et ce qu’ils obtiendront en cas de succès.",
+			"backstory": "Tu es un maître conteur visionnaire. Ton rôle est de poser les premières pierres d’une grande histoire en t'inspirant des idées de l'utilisateur. Tu formules des objectifs clairs pour les joueurs afin que l'aventure soit motivante dès le départ.",
+		},
+
         "stratege": {
-            "role": "Stratège Antagoniste",
-            "goal": "À partir de l’accroche choisie et du contexte général, concevoir l’adversité centrale du scénario en créant un antagoniste fort et cohérent.",
-            "backstory": "Tu es un maître tacticien spécialisé dans la création d’antagonistes mémorables. Ton travail est de forger une figure d’adversité qui soit un reflet des thèmes de l’histoire et un moteur pour le conflit.",
-        },
+			"role": "Stratège Antagoniste",
+			"goal": "Concevoir l’adversaire central du scénario : un antagoniste mémorable, ses motivations et ses moyens d’action.",
+			"backstory": "Tu es un maître tacticien spécialisé dans la création d’antagonistes forts. Tu sais que sans opposition claire, il n’y a pas de tension dramatique. Ton rôle est de donner une identité et une puissance au conflit.",
+		},	
+
         "contextualisateur": {
-            "role": "Architecte de Contexte Narratif",
-            "goal": "Créer un cadre immersif et jouable pour l’histoire, en se basant sur le contexte utilisateur, l'accroche et l'antagoniste.",
-            "backstory": "Ancien game designer, tu sais créer des mondes où chaque détail sert l’aventure. Tu détestes les mondes 'génériques' et adores les contrastes.",
-        },
+			"role": "Architecte de Contexte Narratif",
+			"goal": "Créer un cadre immersif et spécifique où se déroule l’histoire, en détaillant où et pourquoi l’aventure commence maintenant.",
+			"backstory": "Ancien game designer, tu conçois des mondes où chaque détail sert l’aventure. Tu refuses les environnements génériques : chaque lieu doit influencer l’histoire.",
+		},
+
+
         "dramaturge": {
-            "role": "Dramaturge",
-            "goal": "Construire la structure globale de l'histoire. Élaborer le synopsis avec un début, un milieu et une fin clairs.",
-            "backstory": "Tu es un scénariste chevronné, spécialisé dans la construction d'arcs narratifs puissants pour maintenir l'intérêt des joueurs.",
-        },
+			"role": "Dramaturge",
+			"goal": "Construire le synopsis global de l’aventure en répondant à la question : quand et comment l’histoire sera-t-elle résolue ?",
+			"backstory": "Tu es un scénariste chevronné. Ton expertise est de transformer un ensemble d’éléments narratifs en une progression claire : début, développement, climax et fin.",
+		},
+
         "metteur_en_scene": {
-            "role": "Metteur en Scène",
-            "goal": "Transformer le synopsis en une liste claire de scènes jouables, chacune avec un objectif, des obstacles et une ambiance.",
-            "backstory": "Tu es un réalisateur narratif, pensant en séquences et en moments de jeu pour rendre l'histoire concrète et passionnante.",
-        },
+			"role": "Metteur en Scène",
+			"goal": "Découper le synopsis en 5 scènes clés suivant la structure Five-by-Five.",
+			"backstory": "Tu es un réalisateur narratif, tu penses en séquences de jeu. Tu rends l’histoire concrète en établissant un squelette de 5 scènes claires, chacune avec un rôle dramatique et ludique.",
+		},
+
         "specialiste_scene": {
-            "role": "Spécialiste de Scène",
-            "goal": "Développer en détail chaque scène à partir du squelette fourni, en décrivant la situation, les obstacles et les issues possibles.",
-            "backstory": "Tu es un concepteur de situations de jeu immersives, transformant une idée de scène en une expérience vivante et détaillée.",
-        },
+			"role": "Spécialiste de Scène",
+			"goal": "Développer chaque scène en une expérience jouable avec ambiance, enjeux et options claires.",
+			"backstory": "Tu es un concepteur de situations immersives. Ton rôle est de transformer un plan de scène en un moment vivant qui offre des choix intéressants aux joueurs.",
+		},
+		
         "architecte_pnj": {
-            "role": "Architecte des PNJ",
-            "goal": "Dresser les fiches des PNJ majeurs (alliés, neutres, antagonistes) avec identité, personnalité, et motivations.",
-            "backstory": "Expert en psychologie, tu sais que des PNJ mémorables sont la clé d'un monde vivant. Tu crées des individus crédibles et utiles à l'histoire. Présente chaque personnage avec le nom en titre et les éléments suivant à la ligne en mettant en avant leurs titres en gras.",
-        },
+			"role": "Architecte des PNJ",
+			"goal": "Créer les fiches des PNJ majeurs (alliés, neutres, adversaires) avec identité, personnalité et motivations.",
+			"backstory": "Expert en psychologie et en dramaturgie, tu conçois des PNJ qui ajoutent de la profondeur et des dilemmes aux choix des joueurs.",
+		},
+
         "architecte_lieux": {
-            "role": "Architecte des Lieux",
-            "goal": "Détailler les lieux importants du scénario avec une description sensorielle globale, une fonction narrative et des opportunités de jeu. Présente chaque lieu avec le nom en titre et les éléments suivant à la ligne en mettant en avant leurs titres en gras.",
-            "backstory": "Tu es un urbaniste de l'imaginaire, concevant des lieux qui sont des acteurs à part entière de l'histoire.",
-        },
-        "verificateur": {
-            "role": "Vérificateur de Cohérence Narrative",
-            "goal": "Assurer la logique et la cohésion globale du scénario à travers les différentes étapes de sa création.",
-            "backstory": "Tu es un contrôleur qualité narratif avec un œil de lynx pour les détails. Tu garantis que le produit final soit un tout harmonieux.",
-        },
+			"role": "Architecte des Lieux",
+			"goal": "Décrire les lieux majeurs de l’aventure en leur donnant une identité sensorielle, narrative et ludique.",
+			"backstory": "Urbaniste de l’imaginaire, tu crées des lieux qui ne sont pas de simples décors, mais des acteurs qui influencent le jeu.",
+		},
+
         "generateur_titre": {
-            "role": "Générateur de Titre",
-            "goal": "À partir de l'accroche d'un scénario, créer un titre percutant et mémorable.",
-            "backstory": "Tu es un publicitaire spécialisé dans la création de titres accrocheurs. Tu sais comment capturer l'essence d'une histoire en quelques mots.",
-        },
+			"role": "Générateur de Titre",
+			"goal": "Créer un titre percutant et mémorable qui capture l’essence du scénario.",
+			"backstory": "Tu es un publicitaire créatif. Tu sais condenser l’âme d’une histoire en quelques mots forts.",
+		},
+
     }
 
     def _run_task(agent_name, task_description, language, **kwargs):
@@ -103,7 +108,7 @@ def generate_scenario(llm, inputs, language="French"):
     # --- Step 1: Generate initial ideas ---
     task_ideation_output = _run_task(
         "ideateur",
-        "Génère 2 à 3 accroches de scénario distinctes et percutantes basées sur le contexte fourni. Chaque accroche doit être un court paragraphe intrigant. Commence directement par la première accroche, sans phrase d'introduction.",
+        "Génère 2 à 3 accroches distinctes basées sur le contexte fourni. Chaque accroche doit préciser : 1) Ce que les joueurs veulent, 2) Ce qu’ils obtiennent si c’est un succès. Présente chaque accroche sous forme d’un court paragraphe intrigant, sans phrase d’introduction.",
         language,
         **user_context
     )
@@ -125,7 +130,7 @@ def generate_scenario(llm, inputs, language="French"):
     # Task 2: Create the Antagonist
     task_antagoniste_output = _run_task(
         "stratege",
-        "En te basant sur l'accroche sélectionnée et le contexte général fourni par l'utilisateur, développe l'antagoniste principal. Ne fais pas de phrase d'introduction ou de remarques. Crée une fiche descriptive complète pour cet antagoniste (motivations, méthodes, etc.).",
+        "À partir de l'accroche choisie, développe l’antagoniste principal. Fournis : 1) Ses objectifs, 2) Ses motivations profondes, 3) Ses méthodes et ressources, 4) Ses alliés/lieutenants/henchmen, 5) Ses faiblesses. Présente cela sous forme de fiche descriptive sans phrases d’introduction.",
         language,
         **user_context,
         accroche_selectionnee=accroche_selectionnee
@@ -134,7 +139,7 @@ def generate_scenario(llm, inputs, language="French"):
     # Task 3: Build the World Context
     task_contexte_output = _run_task(
         "contextualisateur",
-        "À partir de l'accroche, de l'antagoniste et du contexte utilisateur, construis le contexte du monde. Ne fais pas de phrase d'introduction ou de remarques. Décris l'environnement et le climat social/politique dans un seul paragraphe puis les raisons pour lesquelles l'intrigue se déclenche maintenant. Limite les textes à environ 500 mots.",
+        "À partir de l’accroche et de l’antagoniste, décris : 1) Le lieu de départ, 2) L’environnement central (géographie, ambiance, société), 3) Les tensions politiques/sociales/climatiques qui rendent l’histoire urgente. Rédige un texte d’environ 400-500 mots, sans phrase d’introduction.",
         language,
         **user_context,
         accroche=accroche_selectionnee,
@@ -144,7 +149,7 @@ def generate_scenario(llm, inputs, language="French"):
     # Task 4: Write the Synopsis
     task_synopsis_output = _run_task(
         "dramaturge",
-        "Synthétise toutes les informations (contexte utilisateur, accroche, antagoniste, contexte du monde) pour écrire un synopsis global de l'histoire (300-400 mots) avec un début, un milieu et une fin clairs. Ne fais pas de phrase d'introduction ou de remarques.",
+        "Synthétise les éléments (accroche, antagoniste, contexte) pour rédiger un synopsis structuré. Le synopsis doit couvrir : 1) La mise en place, 2) Les étapes de la montée dramatique, 3) Le climax et la confrontation finale, 4) La résolution possible. Texte entre 300 et 400 mots, sans phrase d’introduction.",
         language,
         **user_context,
         accroche=accroche_selectionnee,
@@ -155,7 +160,7 @@ def generate_scenario(llm, inputs, language="French"):
     # Task 5: Outline the Scenes
     task_decoupage_scenes_output = _run_task(
         "metteur_en_scene",
-        "En te basant sur le synopsis, découpe l'histoire en une liste de scènes clés. Pour chaque scène, donne un titre court et descriptif. La liste doit suivre une progression logique. Ne fais pas de phrase d'introduction ou de remarques.",
+        "Transforme le synopsis en une liste de 5 scènes. Pour chaque scène, donne : 1) Un titre, 2) L’objectif des PJ, 3) L’obstacle ou hazard, 4) Le choix ou dilemme possible. Respecte la logique Five-by-Five : 5 hazards, 4 questions, 3 choix critiques, 2 récompenses exclusives, 1 confrontation finale. Ne fais pas de phrase d’introduction.",
         language,
         **user_context,
         synopsis=task_synopsis_output
@@ -164,7 +169,7 @@ def generate_scenario(llm, inputs, language="French"):
     # Task 7: Detail all scenes
     task_detail_scenes_output = _run_task(
         "specialiste_scene",
-        "Pour CHAQUE scène listée dans le découpage, écris une description détaillée (évenement qui lance la scène, objectif, obstacles, ambiance, issues possibles, lien vers la scène suivante). Ne fais pas de phrase d'introduction ou de remarques. Commence directement par la description de la première scène en mettant en avant le titre puis les éléments descriptifs à la ligne sous forme de liste. Utilise un titre et une présentation ou chaque nouvel élément doit être mis à la ligne pour une présentation en liste",
+        "Pour CHAQUE scène du découpage, développe : 1) L’événement déclencheur, 2) L’objectif des PJ, 3) Les obstacles et dangers, 4) L’ambiance, 5) Les choix disponibles, 6) Les issues possibles, 7) Le lien avec la scène suivante. Présente sous forme de liste claire après le titre de chaque scène.",
         language,
         **user_context,
         decoupage_scenes=task_decoupage_scenes_output
@@ -174,7 +179,7 @@ def generate_scenario(llm, inputs, language="French"):
     # Task 8: Create NPCs
     task_architecte_pnj_output = _run_task(
         "architecte_pnj",
-        "En te basant sur le synopsis et les scènes détaillées, identifie 3 à 5 PNJ majeurs et crée une fiche descriptive pour chacun. Ne fais pas de phrase d'introduction ou de remarques. Commence directement par la description du premier PNJ en mettant en avant le nom en gras puis les éléments descriptifs à la ligne. Chaque partie doit aussi avoir un titre en gras.",
+        "À partir du synopsis et des scènes, identifie 3 à 5 PNJ majeurs. Pour chacun : 1) Nom, 2) Rôle dans l’histoire, 3) Apparence et personnalité, 4) Motivations, 5) Liens avec les PJ et l’antagoniste. Présente en liste claire, sans introduction.",
         language,
         **user_context,
         synopsis=task_synopsis_output,
@@ -185,7 +190,7 @@ def generate_scenario(llm, inputs, language="French"):
     # Task 9: Create Locations
     task_architecte_lieux_output = _run_task(
         "architecte_lieux",
-        "En te basant sur le synopsis et les scènes détaillées, identifie 3 à 5 lieux importants et écris une description détaillée pour chacun. Ne fais pas de phrase d'introduction ou de remarques. Commence directement par la description du premier lieu en mettant en avant le titre en gras puis les éléments descriptifs à la ligne. Chaque partie doit aussi avoir un titre en gras.",
+        "En te basant sur l’accroche choisie, génère 5 propositions de titres percutants. Liste seulement les titres, un par ligne, sans introduction ni numérotation.",
         language,
         **user_context,
         synopsis=task_synopsis_output,
